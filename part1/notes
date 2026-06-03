@@ -1,0 +1,56 @@
++------------------------------------------------------------------+
+|                        Presentation Layer                         |
+|                     Services / API Endpoints                      |
+|                                                                   |
+|   Examples:                                                       |
+|   - User API                                                      |
+|   - Place API                                                     |
+|   - Review API                                                    |
+|   - Amenity API                                                   |
++-------------------------------+----------------------------------+
+                                |
+                                | Uses Facade Pattern
+                                v
++------------------------------------------------------------------+
+|                         Facade Interface                          |
+|                                                                   |
+|   Provides one simple access point for the Presentation Layer     |
+|   to communicate with the Business Logic Layer                    |
++-------------------------------+----------------------------------+
+                                |
+                                | Calls business operations
+                                v
++------------------------------------------------------------------+
+|                       Business Logic Layer                        |
+|                          Models / Entities                        |
+|                                                                   |
+|   +------------+   +------------+   +------------+   +-----------+|
+|   |    User    |   |   Place    |   |   Review   |   |  Amenity  ||
+|   +------------+   +------------+   +------------+   +-----------+|
+|                                                                   |
+|   Responsibilities:                                               |
+|   - Apply business rules                                          |
+|   - Manage entity relationships                                   |
+|   - Validate application logic                                    |
++-------------------------------+----------------------------------+
+                                |
+                                | Database operations
+                                v
++------------------------------------------------------------------+
+|                         Persistence Layer                         |
+|                   Repositories / Database Access                  |
+|                                                                   |
+|   Examples:                                                       |
+|   - UserRepository                                                |
+|   - PlaceRepository                                               |
+|   - ReviewRepository                                              |
+|   - AmenityRepository                                             |
++-------------------------------+----------------------------------+
+                                |
+                                | Stores and retrieves data
+                                v
++------------------------------------------------------------------+
+|                              Database                             |
+|                                                                   |
+|   Stores users, places, reviews, amenities, and relationships     |
++------------------------------------------------------------------+

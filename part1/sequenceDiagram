@@ -1,0 +1,37 @@
+sequenceDiagram
+    actor Client as User / Client App
+
+    box Presentation Layer
+        participant API@{ "type": "boundary" } as Public API
+        participant Controller@{ "type": "control" } as Controller / Service
+    end
+
+    box Facade Boundary
+        participant Facade@{ "type": "control" } as HBNBFacade
+    end
+
+    box Business Logic Layer
+        participant Model@{ "type": "entity" } as Place Model
+    end
+
+    box Persistence Layer
+        participant ORM@{ "type": "control" } as ORM / Repository
+        participant DB@{ "type": "database" } as Database
+    end
+
+    Client->>API: POST /places
+    API->>Controller: Forward request data
+    Controller->>Controller: Validate input
+    Controller->>Facade: create_place(place_data)
+
+    Facade->>Model: Build Place object
+    Model-->>Facade: Place instance
+
+    Facade->>ORM: save(place)
+    ORM->>DB: INSERT place
+    DB-->>ORM: Saved row
+    ORM-->>Facade: Persisted place
+
+    Facade-->>Controller: Place result
+    Controller-->>API: Build HTTP response
+    API-->>Client: 201 Created
