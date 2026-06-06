@@ -23,10 +23,9 @@ class Place {
     +Float latitude
     +Float longitude
     +User owner
-    +Amenity[] amenities
 
-    +create(title, description, price, latitude, longitude, owner) Place
-    +update(title, description, price, latitude, longitude) Place
+    +create(title, description, price, latitude, longitude, owner, amenities) Place
+    +update(title, description, price, latitude, longitude, amenities) Place
     +delete() void
     +addAmenity(amenity) void
     +removeAmenity(amenity) void

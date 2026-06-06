@@ -1,0 +1,19 @@
+Presentation Layer: Services, API endpoints.
+- API (the params, body) (swagger docs)
+- formate the response
+(separation of concerns, single responsibility principle)
+- validation for email and such can happen in presentatio
+- check unique should happen in business logic layer
+- presentation should only be, type, semantic and such (the type of data)
+
+Business Logic Layer: Core models (User, Place, Review, Amenity).
+- class
+- e.g. age limt for user registration, or max number of reviews per user
+
+Persistence Layer: Database access objects or repositories.
+
+README should cotnain how to install dependencies, run the app, and run tests. It should also include a high-level overview of the architecture and design decisions.
+
+place may have 
+
+update all ID to be UUID4
