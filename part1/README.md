@@ -7,7 +7,36 @@ The backend is designed around Flask, SQLAlchemy ORM, and AWS RDS. The applicati
 ## High-Level Architecture
 
 ```text
-<img width="284" height="714" alt="image" src="https://github.com/user-attachments/assets/ea72d92f-36f5-479a-a98b-59de0a0091a9" />
+---
+config:
+  layout: elk
+---
+classDiagram
+    class PresentationLayer {
+        +REST API endpoints
+        +UserController
+        +PlaceController
+        +ReviewController
+        +AmenityController
+    }
+
+    class BusinessLogicLayer {
+        +User
+        +Place
+        +Review
+        +Amenity
+        +HBnBFacade
+    }
+
+    class PersistenceLayer {
+        +UserRepository
+        +PlaceRepository
+        +ReviewRepository
+        +AmenityRepository
+    }
+
+    PresentationLayer --> BusinessLogicLayer : "Facade pattern"
+    BusinessLogicLayer --> PersistenceLayer : "Database operations"
 
 ```
 
