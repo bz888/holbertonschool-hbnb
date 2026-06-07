@@ -7,19 +7,8 @@ The backend is designed around Flask, SQLAlchemy ORM, and AWS RDS. The applicati
 ## High-Level Architecture
 
 ```text
-Frontend Client
-    |
-    v
-Flask API Routes / Controllers
-    |
-    v
-Service Layer / Business Logic
-    |
-    v
-Repository Layer / SQLAlchemy ORM
-    |
-    v
-PostgreSQL | MySQL Database (RDS)
+<img width="284" height="714" alt="image" src="https://github.com/user-attachments/assets/ea72d92f-36f5-479a-a98b-59de0a0091a9" />
+
 ```
 
 ## Business Logic Overview
