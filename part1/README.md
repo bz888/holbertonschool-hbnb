@@ -85,37 +85,81 @@ AWS CloudWatch for logs and monitoring
 
 ## Core Data Models
 
-```text
-User
-- id
-- first_name
-- last_name
-- email
-- password
+```mermaid
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
 
-Place
-- id
-- title
-- description
-- price
-- latitude
-- longitude
-- owner_id
+class BaseModel {
+    +UUID id
+    +datetime created_at
+    +datetime updated_at
+    +save() None
+    +to_dict() dict
+}
 
-Review
-- id
-- comment
-- rating
-- user_id
-- place_id
+class User {
+    +str first_name
+    +str last_name
+    +str email
+    +str password_hash
+    +bool is_admin
+    +register() User
+    +update_profile(data) None
+    +delete() None
+    +validate_email(email) bool
+    +hash_password(password) str
+}
 
-Amenity
-- id
-- name
+class Place {
+    +str title
+    +str description
+    +float price
+    +float latitude
+    +float longitude
+    +UUID owner_id
+    +list amenity_ids
+    +create() Place
+    +update(data) None
+    +delete() None
+    +add_amenity(amenity_id) None
+    +remove_amenity(amenity_id) None
+    +validate_coordinates() bool
+}
 
-PlaceAmenity
-- place_id
-- amenity_id
+class Review {
+    +UUID place_id
+    +UUID user_id
+    +int rating
+    +str comment
+    +create() Review
+    +update(data) None
+    +delete() None
+    +list_by_place(place_id) list
+    +validate_rating() bool
+}
+
+class Amenity {
+    +str name
+    +str description
+    +create() Amenity
+    +update(data) None
+    +delete() None
+    +list_all() list
+}
+
+BaseModel <|-- User : inherits
+BaseModel <|-- Place : inherits
+BaseModel <|-- Review : inherits
+BaseModel <|-- Amenity : inherits
+
+User "1" --> "*" Place : owns
+User "1" --> "*" Review : writes
+Place "1" --> "*" Review : receives
+Place "*" --> "*" Amenity : has
 ```
 
 ## Controllers
