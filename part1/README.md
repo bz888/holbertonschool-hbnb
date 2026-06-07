@@ -6,7 +6,6 @@ The backend is designed around Flask, SQLAlchemy ORM, and AWS RDS. The applicati
 
 ## High-Level Architecture
 
-```text
 ```mermaid
 ---
 config:
