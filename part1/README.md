@@ -382,6 +382,35 @@ Delete a user:
 DELETE /api/users/user_123
 ```
 
+```mermaid
+---
+config:
+  layout: elk
+---
+sequenceDiagram
+    actor client as Client
+    participant PL as Presentation Layer (UserController)
+    participant BLL as Business Logic Layer (UserService)
+    participant DAL as Persistence Layer (UserRepository)
+
+    client->>PL: POST /api/users<br/>{first_name, last_name, email, password}
+    PL->>PL: Validate request body
+    PL->>BLL: register_user(data)
+    BLL->>DAL: find_by_email(email)
+    DAL-->>BLL: None → email available
+    BLL->>BLL: hash_password(password)
+    BLL->>DAL: create_user(data_with_hashed_password)
+    DAL-->>BLL: user record {id="user_123", first_name, last_name, email}
+    BLL-->>PL: created user object
+    PL-->>client: 201 Created<br/>{id, first_name, last_name, email}
+
+    Note over client, PL: Other supported user routes
+    Note right of PL: GET /api/users → List all users
+    Note right of PL: GET /api/users/{user_id} → Retrieve one user
+    Note right of PL: PUT /api/users/{user_id} → Update user info
+    Note right of PL: DELETE /api/users/{user_id} → Remove user
+```
+
 ### Places
 
 Every place must belong to a user, so the `user_id` is included in owner-specific place routes.
@@ -474,6 +503,36 @@ Delete a place:
 DELETE /api/users/user_123/places/place_456
 ```
 
+```mermaid
+---
+config:
+  layout: elk
+---
+sequenceDiagram
+    actor client as Client
+    participant PL as Presentation Layer (PlaceController)
+    participant BLL as Business Logic Layer (PlaceService)
+    participant DALU as Persistence Layer (UserRepository)
+    participant DALP as Persistence Layer (PlaceRepository)
+    participant DALA as Persistence Layer (AmenityRepository)
+
+    client->>PL: POST /api/users/user_123/places<br/>{title, description, price, latitude, longitude, amenities}
+    PL->>PL: Validate request body and parameters
+    PL->>BLL: create_place(user_id="user_123", data)
+    BLL->>DALU: find_user_by_id("user_123")
+    DALU-->>BLL: user object {id, first_name, last_name}
+    BLL->>BLL: validate_place_data(data)
+    BLL->>DALP: create_place(user_id, data)
+    DALP-->>BLL: place object {id="place_456", user_id}
+    loop For each amenity_id in data.amenities
+        BLL->>DALA: find_amenity_by_id(amenity_id)
+        DALA-->>BLL: amenity object
+    end
+    BLL-->>PL: Place object including owner and amenities
+    PL-->>client: 201 Created<br/>{place_id, title, description, price, location, owner, amenities}
+
+```
+
 ### Reviews
 
 Create a review:
@@ -542,6 +601,40 @@ Delete a review:
 DELETE /api/reviews/review_789
 ```
 
+```mermaid
+---
+config:
+  layout: elk
+---
+sequenceDiagram
+    actor client as Client
+    participant PL as Presentation Layer (ReviewController)
+    participant BLL as Business Logic Layer (ReviewService)
+    participant DALR as Persistence Layer (ReviewRepository)
+    participant DALU as Persistence Layer (UserRepository)
+    participant DALP as Persistence Layer (PlaceRepository)
+
+    client->>PL: POST /api/reviews<br/>{comment, rating, user_id, place_id}
+    PL->>PL: Validate request body
+    PL->>BLL: create_review(data)
+    BLL->>DALU: find_user_by_id(user_id)
+    DALU-->>BLL: user object {id, first_name}
+    BLL->>DALP: find_place_by_id(place_id)
+    DALP-->>BLL: place object {id, title}
+    BLL->>BLL: validate_rating(rating)
+    BLL->>DALR: create_review(data)
+    DALR-->>BLL: review record {id="review_789", comment, rating, user_id, place_id}
+    BLL-->>PL: full review with user and place info
+    PL-->>client: 201 Created<br/>{id, comment, rating, user, place}
+
+    Note over client, PL: Other supported review routes
+    Note right of PL: GET /api/places/{place_id}/reviews → List reviews for a place
+    Note right of PL: GET /api/reviews/{review_id} → Retrieve one review
+    Note right of PL: PUT /api/reviews/{review_id} → Update a review
+    Note right of PL: DELETE /api/reviews/{review_id} → Remove a review
+
+```
+
 ### Amenities
 
 Create an amenity:
@@ -595,6 +688,34 @@ Delete an amenity:
 
 ```http
 DELETE /api/amenities/amenity_1
+```
+
+```mermaid
+---
+config:
+  layout: elk
+---
+sequenceDiagram
+    actor client as Client
+    participant PL as Presentation Layer (AmenityController)
+    participant BLL as Business Logic Layer (AmenityService)
+    participant DAL as Persistence Layer (AmenityRepository)
+
+    client->>PL: POST /api/amenities<br/>{name: "WiFi"}
+    PL->>PL: Validate request body
+    PL->>BLL: create_amenity(data)
+    BLL->>BLL: validate_name(name)
+    BLL->>DAL: create_amenity_record(name)
+    DAL-->>BLL: amenity record {id="amenity_1", name="WiFi"}
+    BLL-->>PL: created amenity object
+    PL-->>client: 201 Created<br/>{id: "amenity_1", name: "WiFi"}
+
+    Note over client, PL: Other supported amenity routes
+    Note right of PL: GET /api/amenities → Retrieve all amenities
+    Note right of PL: GET /api/amenities/{amenity_id} → Retrieve a single amenity
+    Note right of PL: PUT /api/amenities/{amenity_id} → Update an amenity
+    Note right of PL: DELETE /api/amenities/{amenity_id} → Remove an amenity
+
 ```
 
 ## Error Responses
