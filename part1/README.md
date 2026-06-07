@@ -7,11 +7,13 @@ The backend is designed around Flask, SQLAlchemy ORM, and AWS RDS. The applicati
 ## High-Level Architecture
 
 ```text
+```mermaid
 ---
 config:
   layout: elk
 ---
 classDiagram
+direction TB
     class PresentationLayer {
         +REST API endpoints
         +UserController
