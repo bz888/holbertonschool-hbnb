@@ -21,15 +21,15 @@ erDiagram
         float price
         float latitude
         float longitude
-        string owner_id FK
+        UUID4 owner_id FK
     }
 
     REVIEW {
         UUID4 id PK
         string comment
         int rating
-        string user_id FK
-        string place_id FK
+        UUID4 user_id FK
+        UUID4 place_id FK
     }
 
     AMENITY {

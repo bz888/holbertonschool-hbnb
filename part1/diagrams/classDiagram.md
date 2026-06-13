@@ -4,7 +4,7 @@ classDiagram
     note "1 is used for one"
 
 class User {
-    #String id
+    #UUID4 id
     +String first_name
     +String last_name
     +String email
@@ -17,7 +17,7 @@ class User {
 }
 
 class Place {
-    #String id
+    #UUID4 id
     +String title
     +String description
     +Float price
@@ -33,7 +33,7 @@ class Place {
 }
 
 class Review {
-    #String id
+    #UUID4 id
     +String comment
     +Integer rating
     +User user
@@ -45,7 +45,7 @@ class Review {
 }
 
 class Amenity {
-    #String id
+    #UUID4 id
     +String name
 
     +create(name) Amenity
