@@ -1,3 +1,4 @@
+```mermaid
 classDiagram
     note "0..* is used for many"
     note "1 is used for one"
@@ -56,3 +57,4 @@ User "1" --> "0..*" Place : owns
 User "1" --> "0..*" Review : writes
 Place "1" --> "0..*" Review : receives
 Place "0..*" o-- "0..*" Amenity : has
+```

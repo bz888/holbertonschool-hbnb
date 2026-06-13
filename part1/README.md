@@ -1,36 +1,40 @@
 # HBNB
 
-## High-Level Architecture
+## High-level architecture
 
-The HBnB backend uses a layered architecture to keep API handling, business rules, and database access separated.
+The HBnB backend uses a layered architecture to separate API handling, business rules, and database access. Each layer has a clear responsibility, which makes the application easier to test, maintain, and extend.
 
-- **Presentation Layer (Services, API):** This layer handles the interaction between the user and the application. It includes all the services and APIs that are exposed to the users.
-- **Business Logic Layer (Models):** This layer contains the core business logic and the models that represent the entities in the system, such as `User`, `Place`, `Review`, and `Amenity`.
-- **Persistence Layer:** This layer is responsible for data storage and retrieval, interacting directly with the database.
+- **Presentation layer (services and API):** Receives user requests and returns API responses. This layer includes the Flask API and Flask-RESTX resources that users interact with. For example, when a client sends `POST /api/users`, a Flask-RESTX resource receives the request, checks the request format, and passes the data to the facade.
 
-## Facade Pattern
+- **Business logic layer (models):** Applies the core business rules and defines the main entities, such as `User`, `Place`, `Review`, and `Amenity`. For example, before the application creates a `Place`, this layer checks that the owner exists, the price is valid, and the latitude and longitude are in range.
 
-The `HBnBFacade` provides a single entry point between the Presentation Layer and the Business Logic Layer. API resources call the facade instead of directly accessing models or persistence logic, which keeps the application easier to maintain and extend.
+- **Persistence layer:** Stores and retrieves data from the database. For example, after the business logic validates a new user, the repository saves the user record to PostgreSQL and retrieves it later for `GET /api/users/{user_id}`.
 
-## Package Diagram
+In practice, a request moves through the layers like this: the API receives the request, the facade calls the correct business logic, and the repository stores or retrieves the data from the database.
+
+## Facade pattern
+
+The `HBnBFacade` provides a single entry point between the presentation layer and the business logic layer. API resources call the facade instead of directly accessing models or persistence logic. This separation makes the application easier to maintain and extend.
+
+## Package diagram
 
 ```mermaid
 flowchart TB
-    Client["Client / User"]
+    Client["Client or user"]
 
-    subgraph Presentation["Presentation Layer"]
-        Server["Flask Application Server"]
+    subgraph Presentation["Presentation layer"]
+        Server["Flask application server"]
         API["Flask API"]
-        RestX["Flask-RESTX Resources"]
-        Auth["JWT Authentication"]
+        RestX["Flask-RESTX resources"]
+        Auth["JWT authentication"]
     end
 
-    subgraph Business["Business Logic Layer"]
+    subgraph Business["Business logic layer"]
         Facade["HBnBFacade"]
         Models["Models: User, Place, Review, Amenity"]
     end
 
-    subgraph Persistence["Persistence Layer"]
+    subgraph Persistence["Persistence layer"]
         Repositories["Repositories"]
         Database[("PostgreSQL")]
     end
@@ -45,7 +49,15 @@ flowchart TB
     Repositories --> Database
 ```
 
-## Technology Stack
+## Diagrams
+
+The detailed diagrams are stored in separate files:
+
+- [Class diagram](diagrams/classDiagram.md)
+- [Entity relationship diagram](diagrams/erDiagram.md)
+- [Sequence diagram](diagrams/sequenceDiagram.md)
+
+## Technology stack
 
 - Python
 - Flask API
@@ -54,41 +66,51 @@ flowchart TB
 - JWT authentication
 - PostgreSQL
 
-## Required API Calls
+## Required API calls
 
 ### Authentication
 
-- `POST /api/auth/login` - authenticate a user and return a JWT.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/auth/login` | Authenticates a user and returns a JWT. |
 
 ### Users
 
-- `POST /api/users` - create a user.
-- `GET /api/users` - list all users.
-- `GET /api/users/{user_id}` - get one user.
-- `PUT /api/users/{user_id}` - update a user.
-- `DELETE /api/users/{user_id}` - delete a user.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/users` | Creates a user. |
+| `GET` | `/api/users` | Lists all users. |
+| `GET` | `/api/users/{user_id}` | Retrieves a user. |
+| `PUT` | `/api/users/{user_id}` | Updates a user. |
+| `DELETE` | `/api/users/{user_id}` | Deletes a user. |
 
 ### Places
 
-- `POST /api/users/{user_id}/places` - create a place for a user.
-- `GET /api/places` - list all places.
-- `GET /api/users/{user_id}/places` - list places owned by a user.
-- `GET /api/places/{place_id}` - get one place.
-- `PUT /api/users/{user_id}/places/{place_id}` - update a user's place.
-- `DELETE /api/users/{user_id}/places/{place_id}` - delete a user's place.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/users/{user_id}/places` | Creates a place for a user. |
+| `GET` | `/api/places` | Lists all places. |
+| `GET` | `/api/users/{user_id}/places` | Lists places owned by a user. |
+| `GET` | `/api/places/{place_id}` | Retrieves a place. |
+| `PUT` | `/api/users/{user_id}/places/{place_id}` | Updates a user's place. |
+| `DELETE` | `/api/users/{user_id}/places/{place_id}` | Deletes a user's place. |
 
 ### Reviews
 
-- `POST /api/reviews` - create a review.
-- `GET /api/places/{place_id}/reviews` - list reviews for a place.
-- `GET /api/reviews/{review_id}` - get one review.
-- `PUT /api/reviews/{review_id}` - update a review.
-- `DELETE /api/reviews/{review_id}` - delete a review.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/reviews` | Creates a review. |
+| `GET` | `/api/places/{place_id}/reviews` | Lists reviews for a place. |
+| `GET` | `/api/reviews/{review_id}` | Retrieves a review. |
+| `PUT` | `/api/reviews/{review_id}` | Updates a review. |
+| `DELETE` | `/api/reviews/{review_id}` | Deletes a review. |
 
 ### Amenities
 
-- `POST /api/amenities` - create an amenity.
-- `GET /api/amenities` - list all amenities.
-- `GET /api/amenities/{amenity_id}` - get one amenity.
-- `PUT /api/amenities/{amenity_id}` - update an amenity.
-- `DELETE /api/amenities/{amenity_id}` - delete an amenity.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/amenities` | Creates an amenity. |
+| `GET` | `/api/amenities` | Lists all amenities. |
+| `GET` | `/api/amenities/{amenity_id}` | Retrieves an amenity. |
+| `PUT` | `/api/amenities/{amenity_id}` | Updates an amenity. |
+| `DELETE` | `/api/amenities/{amenity_id}` | Deletes an amenity. |

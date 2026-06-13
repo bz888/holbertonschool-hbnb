@@ -1,3 +1,4 @@
+```mermaid
 erDiagram
     USER ||--o{ PLACE : owns
     USER ||--o{ REVIEW : writes
@@ -40,3 +41,4 @@ erDiagram
         UUID4 place_id PK, FK
         UUID4 amenity_id PK, FK
     }
+```

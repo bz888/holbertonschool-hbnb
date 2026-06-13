@@ -1,3 +1,4 @@
+```mermaid
 sequenceDiagram
     actor Client as User / Client App
 
@@ -35,3 +36,4 @@ sequenceDiagram
     Facade-->>Controller: Place result
     Controller-->>API: Build HTTP response
     API-->>Client: 201 Created
+```
