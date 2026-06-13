@@ -1,813 +1,94 @@
 # HBNB
 
-This README describes the high-level backend operations, business logic, API structure, service classes, repositories, ORM usage, database choice, frontend consumers, and expected JSON payloads for an Airbnb-style clone.
-
-The backend is designed around Flask, SQLAlchemy ORM, and AWS RDS. The application follows a layered architecture so that API routes, business logic, and database access remain separated.
-
 ## High-Level Architecture
 
-```mermaid
----
-config:
-  layout: elk
----
-classDiagram
-direction TB
-    class PresentationLayer {
-        +REST API endpoints
-        +UserController
-        +PlaceController
-        +ReviewController
-        +AmenityController
-    }
+The HBnB backend uses a layered architecture to keep API handling, business rules, and database access separated.
 
-    class BusinessLogicLayer {
-        +User
-        +Place
-        +Review
-        +Amenity
-        +HBnBFacade
-    }
+- **Presentation Layer (Services, API):** This layer handles the interaction between the user and the application. It includes all the services and APIs that are exposed to the users.
+- **Business Logic Layer (Models):** This layer contains the core business logic and the models that represent the entities in the system, such as `User`, `Place`, `Review`, and `Amenity`.
+- **Persistence Layer:** This layer is responsible for data storage and retrieval, interacting directly with the database.
 
-    class PersistenceLayer {
-        +UserRepository
-        +PlaceRepository
-        +ReviewRepository
-        +AmenityRepository
-    }
+## Facade Pattern
 
-    PresentationLayer --> BusinessLogicLayer : "Facade pattern"
-    BusinessLogicLayer --> PersistenceLayer : "Database operations"
+The `HBnBFacade` provides a single entry point between the Presentation Layer and the Business Logic Layer. API resources call the facade instead of directly accessing models or persistence logic, which keeps the application easier to maintain and extend.
 
-```
-
-## Business Logic Overview
-
-The application allows users to list places, review places, and associate amenities with places.
-
-A `User` can own many `Place` records. Each `Place` must belong to exactly one `User`, which means places require an owner before they can be created.
-
-A `User` can write many `Review` records. Each `Review` belongs to one `User` and one `Place`.
-
-A `Place` can have many `Amenity` records, and one `Amenity` can be linked to many places. This is a many-to-many relationship handled through the `place_amenities` join table.
-
-## Potential Tech Stack
-
-### Backend
-```text
-Python
-Flask 
-```
-
-### Database
-
-```text
-PostgreSQL or MySQL
-```
-PostgreSQL is a strong choice because it supports relational integrity, joins, constraints, indexing, and production-scale querying.
-
-### Development And Testing
-
-```text
-Postman
-pytest
-Docker
-GitHub Actions
-```
-
-### Deployment
-
-```text
-AWS RDS for the database
-AWS Elastic Beanstalk, ECS, or EC2 for the Flask API
-AWS CloudWatch for logs and monitoring
-```
-
-## Core Data Models
+## Package Diagram
 
 ```mermaid
----
-config:
-  layout: elk
----
-classDiagram
-direction TB
+flowchart TB
+    Client["Client / User"]
 
-class BaseModel {
-    +UUID id
-    +datetime created_at
-    +datetime updated_at
-    +save() None
-    +to_dict() dict
-}
+    subgraph Presentation["Presentation Layer"]
+        Server["Flask Application Server"]
+        API["Flask API"]
+        RestX["Flask-RESTX Resources"]
+        Auth["JWT Authentication"]
+    end
 
-class User {
-    +str first_name
-    +str last_name
-    +str email
-    +str password_hash
-    +bool is_admin
-    +register() User
-    +update_profile(data) None
-    +delete() None
-    +validate_email(email) bool
-    +hash_password(password) str
-}
+    subgraph Business["Business Logic Layer"]
+        Facade["HBnBFacade"]
+        Models["Models: User, Place, Review, Amenity"]
+    end
 
-class Place {
-    +str title
-    +str description
-    +float price
-    +float latitude
-    +float longitude
-    +UUID owner_id
-    +list amenity_ids
-    +create() Place
-    +update(data) None
-    +delete() None
-    +add_amenity(amenity_id) None
-    +remove_amenity(amenity_id) None
-    +validate_coordinates() bool
-}
+    subgraph Persistence["Persistence Layer"]
+        Repositories["Repositories"]
+        Database[("PostgreSQL")]
+    end
 
-class Review {
-    +UUID place_id
-    +UUID user_id
-    +int rating
-    +str comment
-    +create() Review
-    +update(data) None
-    +delete() None
-    +list_by_place(place_id) list
-    +validate_rating() bool
-}
-
-class Amenity {
-    +str name
-    +str description
-    +create() Amenity
-    +update(data) None
-    +delete() None
-    +list_all() list
-}
-
-BaseModel <|-- User : inherits
-BaseModel <|-- Place : inherits
-BaseModel <|-- Review : inherits
-BaseModel <|-- Amenity : inherits
-
-User "1" --> "*" Place : owns
-User "1" --> "*" Review : writes
-Place "1" --> "*" Review : receives
-Place "*" --> "*" Amenity : has
+    Client --> Server
+    Server --> API
+    API --> RestX
+    RestX --> Auth
+    Auth --> Facade
+    Facade --> Models
+    Models --> Repositories
+    Repositories --> Database
 ```
 
-## Controllers
+## Technology Stack
 
-Controllers handle HTTP requests and responses. Their job is to read request data, validate it, call the correct service method, and return JSON responses.
+- Python
+- Flask API
+- Flask-RESTX
+- Flask application server
+- JWT authentication
+- PostgreSQL
 
-Controllers should not contain direct database logic. Database work should be handled by repositories through the ORM.
+## Required API Calls
 
-### UserController
+### Authentication
 
-```text
-create_user()
-get_users()
-get_user(user_id)
-update_user(user_id)
-delete_user(user_id)
-```
-
-### PlaceController
-
-```text
-create_place(user_id)
-get_places()
-get_place(place_id)
-get_user_places(user_id)
-update_place(user_id, place_id)
-delete_place(user_id, place_id)
-```
-
-Because every place belongs to one user, create, update, and delete operations include `user_id` when ownership needs to be checked.
-
-### ReviewController
-
-```text
-create_review()
-get_place_reviews(place_id)
-get_review(review_id)
-update_review(review_id)
-delete_review(review_id)
-```
-
-### AmenityController
-
-```text
-create_amenity()
-get_amenities()
-get_amenity(amenity_id)
-update_amenity(amenity_id)
-delete_amenity(amenity_id)
-```
-
-## Service Classes
-
-Services contain the main business logic. They sit between the controllers and repositories.
-
-### UserService
-
-```text
-create_user(data)
-get_user(user_id)
-get_all_users()
-update_user(user_id, data)
-delete_user(user_id)
-```
-
-### PlaceService
-
-```text
-create_place(user_id, data)
-get_place(place_id)
-get_all_places()
-get_places_by_user(user_id)
-update_place(user_id, place_id, data)
-delete_place(user_id, place_id)
-add_amenity(place_id, amenity_id)
-remove_amenity(place_id, amenity_id)
-```
-
-The `PlaceService` should check that the user exists before creating a place. It should also confirm that a place belongs to the provided user before allowing update or delete operations.
-
-### ReviewService
-
-```text
-create_review(data)
-get_review(review_id)
-get_reviews_by_place(place_id)
-update_review(review_id, data)
-delete_review(review_id)
-```
-
-The `ReviewService` should check that the referenced user and place exist before creating a review.
-
-### AmenityService
-
-```text
-create_amenity(data)
-get_amenity(amenity_id)
-get_all_amenities()
-update_amenity(amenity_id, data)
-delete_amenity(amenity_id)
-```
-
-## Repository Layer
-
-Repositories isolate database operations from business logic.
-
-```text
-UserRepository
-PlaceRepository
-ReviewRepository
-AmenityRepository
-```
-
-Common repository methods:
-
-```text
-save(entity)
-get_by_id(id)
-get_all()
-update(id, data)
-delete(id)
-```
-
-Repository-specific methods:
-
-```text
-PlaceRepository.get_by_owner(user_id)
-ReviewRepository.get_by_place(place_id)
-ReviewRepository.get_by_user(user_id)
-AmenityRepository.get_by_name(name)
-```
-
-## ORM
-
-SQLAlchemy ORM maps Python classes to database tables.
-
-```text
-User model -> users table
-Place model -> places table
-Review model -> reviews table
-Amenity model -> amenities table
-PlaceAmenity relationship -> place_amenities join table
-```
-
-The ORM handles:
-
-```text
-INSERT
-SELECT
-UPDATE
-DELETE
-JOIN
-relationship loading
-foreign key constraints
-many-to-many relationships
-```
-
-## API Endpoints
+- `POST /api/auth/login` - authenticate a user and return a JWT.
 
 ### Users
 
-Create a user:
-
-```http
-POST /api/users
-Content-Type: application/json
-```
-
-```json
-{
-  "first_name": "Ben",
-  "last_name": "Smith",
-  "email": "ben@example.com",
-  "password": "securePassword123"
-}
-```
-
-Example response:
-
-```json
-{
-  "id": "user_123",
-  "first_name": "Ben",
-  "last_name": "Smith",
-  "email": "ben@example.com"
-}
-```
-
-Get all users:
-
-```http
-GET /api/users
-```
-
-Get one user:
-
-```http
-GET /api/users/user_123
-```
-
-Update a user:
-
-```http
-PUT /api/users/user_123
-Content-Type: application/json
-```
-
-```json
-{
-  "first_name": "Benjamin",
-  "last_name": "Smith",
-  "email": "benjamin@example.com",
-  "password": "newPassword123"
-}
-```
-
-Delete a user:
-
-```http
-DELETE /api/users/user_123
-```
-
-```mermaid
----
-config:
-  layout: elk
----
-sequenceDiagram
-    actor client as Client
-    participant PL as Presentation Layer (UserController)
-    participant BLL as Business Logic Layer (UserService)
-    participant DAL as Persistence Layer (UserRepository)
-
-    client->>PL: POST /api/users<br/>{first_name, last_name, email, password}
-    PL->>PL: Validate request body
-    PL->>BLL: register_user(data)
-    BLL->>DAL: find_by_email(email)
-    DAL-->>BLL: None → email available
-    BLL->>BLL: hash_password(password)
-    BLL->>DAL: create_user(data_with_hashed_password)
-    DAL-->>BLL: user record {id="user_123", first_name, last_name, email}
-    BLL-->>PL: created user object
-    PL-->>client: 201 Created<br/>{id, first_name, last_name, email}
-
-    Note over client, PL: Other supported user routes
-    Note right of PL: GET /api/users → List all users
-    Note right of PL: GET /api/users/{user_id} → Retrieve one user
-    Note right of PL: PUT /api/users/{user_id} → Update user info
-    Note right of PL: DELETE /api/users/{user_id} → Remove user
-```
+- `POST /api/users` - create a user.
+- `GET /api/users` - list all users.
+- `GET /api/users/{user_id}` - get one user.
+- `PUT /api/users/{user_id}` - update a user.
+- `DELETE /api/users/{user_id}` - delete a user.
 
 ### Places
 
-Every place must belong to a user, so the `user_id` is included in owner-specific place routes.
-
-Create a place:
-
-```http
-POST /api/users/user_123/places
-Content-Type: application/json
-```
-
-```json
-{
-  "title": "Modern Beach Apartment",
-  "description": "A bright apartment close to the beach.",
-  "price": 180.0,
-  "latitude": -37.8136,
-  "longitude": 144.9631,
-  "amenities": ["amenity_1", "amenity_2"]
-}
-```
-
-Example response:
-
-```json
-{
-  "id": "place_456",
-  "title": "Modern Beach Apartment",
-  "description": "A bright apartment close to the beach.",
-  "price": 180.0,
-  "latitude": -37.8136,
-  "longitude": 144.9631,
-  "owner": {
-    "id": "user_123",
-    "first_name": "Ben",
-    "last_name": "Smith"
-  },
-  "amenities": [
-    {
-      "id": "amenity_1",
-      "name": "WiFi"
-    },
-    {
-      "id": "amenity_2",
-      "name": "Parking"
-    }
-  ]
-}
-```
-
-Get all places:
-
-```http
-GET /api/places
-```
-
-Get all places owned by a user:
-
-```http
-GET /api/users/user_123/places
-```
-
-Get one place:
-
-```http
-GET /api/places/place_456
-```
-
-Update a place:
-
-```http
-PUT /api/users/user_123/places/place_456
-Content-Type: application/json
-```
-
-```json
-{
-  "title": "Updated Beach Apartment",
-  "description": "Updated description.",
-  "price": 200.0,
-  "latitude": -37.8136,
-  "longitude": 144.9631,
-  "amenities": ["amenity_1"]
-}
-```
-
-Delete a place:
-
-```http
-DELETE /api/users/user_123/places/place_456
-```
-
-```mermaid
----
-config:
-  layout: elk
----
-sequenceDiagram
-    actor client as Client
-    participant PL as Presentation Layer (PlaceController)
-    participant BLL as Business Logic Layer (PlaceService)
-    participant DALU as Persistence Layer (UserRepository)
-    participant DALP as Persistence Layer (PlaceRepository)
-    participant DALA as Persistence Layer (AmenityRepository)
-
-    client->>PL: POST /api/users/user_123/places<br/>{title, description, price, latitude, longitude, amenities}
-    PL->>PL: Validate request body and parameters
-    PL->>BLL: create_place(user_id="user_123", data)
-    BLL->>DALU: find_user_by_id("user_123")
-    DALU-->>BLL: user object {id, first_name, last_name}
-    BLL->>BLL: validate_place_data(data)
-    BLL->>DALP: create_place(user_id, data)
-    DALP-->>BLL: place object {id="place_456", user_id}
-    loop For each amenity_id in data.amenities
-        BLL->>DALA: find_amenity_by_id(amenity_id)
-        DALA-->>BLL: amenity object
-    end
-    BLL-->>PL: Place object including owner and amenities
-    PL-->>client: 201 Created<br/>{place_id, title, description, price, location, owner, amenities}
-
-```
+- `POST /api/users/{user_id}/places` - create a place for a user.
+- `GET /api/places` - list all places.
+- `GET /api/users/{user_id}/places` - list places owned by a user.
+- `GET /api/places/{place_id}` - get one place.
+- `PUT /api/users/{user_id}/places/{place_id}` - update a user's place.
+- `DELETE /api/users/{user_id}/places/{place_id}` - delete a user's place.
 
 ### Reviews
 
-Create a review:
-
-```http
-POST /api/reviews
-Content-Type: application/json
-```
-
-```json
-{
-  "comment": "Great location and very clean.",
-  "rating": 5,
-  "user_id": "user_123",
-  "place_id": "place_456"
-}
-```
-
-Example response:
-
-```json
-{
-  "id": "review_789",
-  "comment": "Great location and very clean.",
-  "rating": 5,
-  "user": {
-    "id": "user_123",
-    "first_name": "Ben"
-  },
-  "place": {
-    "id": "place_456",
-    "title": "Modern Beach Apartment"
-  }
-}
-```
-
-Get reviews for a place:
-
-```http
-GET /api/places/place_456/reviews
-```
-
-Get one review:
-
-```http
-GET /api/reviews/review_789
-```
-
-Update a review:
-
-```http
-PUT /api/reviews/review_789
-Content-Type: application/json
-```
-
-```json
-{
-  "comment": "Updated review text.",
-  "rating": 4
-}
-```
-
-Delete a review:
-
-```http
-DELETE /api/reviews/review_789
-```
-
-```mermaid
----
-config:
-  layout: elk
----
-sequenceDiagram
-    actor client as Client
-    participant PL as Presentation Layer (ReviewController)
-    participant BLL as Business Logic Layer (ReviewService)
-    participant DALR as Persistence Layer (ReviewRepository)
-    participant DALU as Persistence Layer (UserRepository)
-    participant DALP as Persistence Layer (PlaceRepository)
-
-    client->>PL: POST /api/reviews<br/>{comment, rating, user_id, place_id}
-    PL->>PL: Validate request body
-    PL->>BLL: create_review(data)
-    BLL->>DALU: find_user_by_id(user_id)
-    DALU-->>BLL: user object {id, first_name}
-    BLL->>DALP: find_place_by_id(place_id)
-    DALP-->>BLL: place object {id, title}
-    BLL->>BLL: validate_rating(rating)
-    BLL->>DALR: create_review(data)
-    DALR-->>BLL: review record {id="review_789", comment, rating, user_id, place_id}
-    BLL-->>PL: full review with user and place info
-    PL-->>client: 201 Created<br/>{id, comment, rating, user, place}
-
-    Note over client, PL: Other supported review routes
-    Note right of PL: GET /api/places/{place_id}/reviews → List reviews for a place
-    Note right of PL: GET /api/reviews/{review_id} → Retrieve one review
-    Note right of PL: PUT /api/reviews/{review_id} → Update a review
-    Note right of PL: DELETE /api/reviews/{review_id} → Remove a review
-
-```
+- `POST /api/reviews` - create a review.
+- `GET /api/places/{place_id}/reviews` - list reviews for a place.
+- `GET /api/reviews/{review_id}` - get one review.
+- `PUT /api/reviews/{review_id}` - update a review.
+- `DELETE /api/reviews/{review_id}` - delete a review.
 
 ### Amenities
 
-Create an amenity:
-
-```http
-POST /api/amenities
-Content-Type: application/json
-```
-
-```json
-{
-  "name": "WiFi"
-}
-```
-
-Example response:
-
-```json
-{
-  "id": "amenity_1",
-  "name": "WiFi"
-}
-```
-
-Get all amenities:
-
-```http
-GET /api/amenities
-```
-
-Get one amenity:
-
-```http
-GET /api/amenities/amenity_1
-```
-
-Update an amenity:
-
-```http
-PUT /api/amenities/amenity_1
-Content-Type: application/json
-```
-
-```json
-{
-  "name": "High-speed WiFi"
-}
-```
-
-Delete an amenity:
-
-```http
-DELETE /api/amenities/amenity_1
-```
-
-```mermaid
----
-config:
-  layout: elk
----
-sequenceDiagram
-    actor client as Client
-    participant PL as Presentation Layer (AmenityController)
-    participant BLL as Business Logic Layer (AmenityService)
-    participant DAL as Persistence Layer (AmenityRepository)
-
-    client->>PL: POST /api/amenities<br/>{name: "WiFi"}
-    PL->>PL: Validate request body
-    PL->>BLL: create_amenity(data)
-    BLL->>BLL: validate_name(name)
-    BLL->>DAL: create_amenity_record(name)
-    DAL-->>BLL: amenity record {id="amenity_1", name="WiFi"}
-    BLL-->>PL: created amenity object
-    PL-->>client: 201 Created<br/>{id: "amenity_1", name: "WiFi"}
-
-    Note over client, PL: Other supported amenity routes
-    Note right of PL: GET /api/amenities → Retrieve all amenities
-    Note right of PL: GET /api/amenities/{amenity_id} → Retrieve a single amenity
-    Note right of PL: PUT /api/amenities/{amenity_id} → Update an amenity
-    Note right of PL: DELETE /api/amenities/{amenity_id} → Remove an amenity
-
-```
-
-## Error Responses
-
-Validation error:
-
-```json
-{
-  "error": "ValidationError",
-  "message": "Email is required."
-}
-```
-
-Not found error:
-
-```json
-{
-  "error": "NotFound",
-  "message": "Place not found."
-}
-```
-
-Unauthorized error:
-
-```json
-{
-  "error": "Unauthorized",
-  "message": "You are not allowed to perform this action."
-}
-```
-
-Ownership error:
-
-```json
-{
-  "error": "Forbidden",
-  "message": "This place does not belong to the provided user."
-}
-```
-
-## Frontend Consumers
-
-Frontend consumers are pages, components, or services that call the backend API using JSON.
-
-```text
-Signup Page
-- POST /api/users
-
-Profile Page
-- GET /api/users/{user_id}
-- PUT /api/users/{user_id}
-
-Places Listing Page
-- GET /api/places
-
-User Dashboard
-- GET /api/users/{user_id}/places
-- DELETE /api/users/{user_id}/places/{place_id}
-
-Create Place Form
-- POST /api/users/{user_id}/places
-- GET /api/amenities
-
-Place Details Page
-- GET /api/places/{place_id}
-- GET /api/places/{place_id}/reviews
-
-Review Form
-- POST /api/reviews
-
-Amenity Management Page
-- POST /api/amenities
-- GET /api/amenities
-- PUT /api/amenities/{amenity_id}
-- DELETE /api/amenities/{amenity_id}
-```
-
-## Request Flow Example
-
-Creating a place follows this flow:
-
-```text
-Frontend sends POST /api/users/user_123/places
-Controller validates request body
-PlaceService checks that user_123 exists
-PlaceService creates the Place model
-PlaceRepository saves it through SQLAlchemy
-SQLAlchemy inserts the record into AWS RDS
-Controller returns the created place as JSON
-```
-
-## Summary
-
-The Flask backend exposes REST APIs for frontend consumers. Controllers handle HTTP concerns, services enforce business rules, repositories isolate persistence logic, SQLAlchemy maps Python models to relational tables, and AWS RDS stores the application data.
-
+- `POST /api/amenities` - create an amenity.
+- `GET /api/amenities` - list all amenities.
+- `GET /api/amenities/{amenity_id}` - get one amenity.
+- `PUT /api/amenities/{amenity_id}` - update an amenity.
+- `DELETE /api/amenities/{amenity_id}` - delete an amenity.
