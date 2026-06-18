@@ -2,7 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from services import facade
 
 api = Namespace('reviews', description='Review operations')
-
+# TODO owner cannot make review on their own place, this should be implemented in the service layer and tested accordingly.
 review_model = api.model('Review', {
     'text': fields.String(required=True, description='Review text'),
     'rating': fields.Integer(required=True, description='Rating from 1 to 5'),

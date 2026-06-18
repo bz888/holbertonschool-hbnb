@@ -18,9 +18,11 @@ user_update_model = api.model('UserUpdate', {
 
 @api.route('/')
 class UserList(Resource):
+	# TODO need to add data sctructure of resp
     @api.response(200, 'Users retrieved successfully')
     def get(self):
         """List all users"""
+				# TODO this should be limited, not all keys should be included
         return [user.to_dict() for user in facade.get_all_users()], 200
 
     @api.expect(user_model, validate=True)
@@ -31,6 +33,7 @@ class UserList(Resource):
         """Register a new user"""
         user_data = api.payload
 
+# TODO this should be aligned with other models and implementations across all resources.
         existing_user = facade.get_user_by_email(user_data['email'])
         if existing_user:
             return {'error': 'Email already registered'}, 400

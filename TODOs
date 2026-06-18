@@ -11,3 +11,15 @@ all CRUD operations with in mem persistence layer, including error handling for 
 unit tests do not offer full coverage of the API, but they do cover the core logic of the facade and repository layers.
 
 NOTE: this alot of boilerplate code, please go over it and make sure to understand the structure and flow of the application.
+
+
+TODO (Catch up with Jonathan 17 JUN)
+### owner cannot make review on their own place, this should be implemented in the service layer and tested accordingly. (This is not strictly only for this, but any other situtations also)
+
+### need to add data sctructure of resp for the purpose of documentation and clarity.
+
+### Implement SWAGGER docs
+
+### Update APIs to ensure that payload returned is consistent (the mapping should be done via the API layer)
+
+### Consistency across code, facade layer should handle any logics, such as isExisting user or not, and the API layer should only handle the request and response, and call the facade layer accordingly.
