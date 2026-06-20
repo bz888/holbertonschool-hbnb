@@ -130,6 +130,53 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             {"error": "Owners cannot review their own place"},
         )
 
+    def test_user_responses_exclude_internal_model_fields(self):
+        created_response = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+            },
+        )
+        user_id = created_response.get_json()["id"]
+        retrieved_response = self.client.get(
+            f"/api/v1/users/{user_id}"
+        )
+        updated_response = self.client.put(
+            f"/api/v1/users/{user_id}",
+            json={"first_name": "Augusta Ada"},
+        )
+        listed_response = self.client.get("/api/v1/users/")
+
+        expected_keys = {
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+        }
+
+        for response in (
+            created_response,
+            retrieved_response,
+            updated_response,
+        ):
+            self.assertEqual(
+                set(response.get_json()),
+                expected_keys,
+            )
+
+        self.assertEqual(
+            set(listed_response.get_json()[0]),
+            expected_keys,
+        )
+
+        user = facade.get_user(user_id)
+        self.assertIn("is_admin", user.to_dict())
+        self.assertIn("is_active", user.to_dict())
+        self.assertIn("created_at", user.to_dict())
+        self.assertIn("updated_at", user.to_dict())
+
 
 if __name__ == "__main__":
     unittest.main()
