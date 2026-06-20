@@ -43,6 +43,32 @@ class Review(BaseModel):
 
         self._rating = value
 
+    @property
+    def place(self):
+        return self._place
+
+    @place.setter
+    def place(self, value):
+        from .place import Place
+
+        if not isinstance(value, Place):
+            raise ValueError("Review place must be a Place")
+
+        self._place = value
+
+    @property
+    def user(self):
+        return self._user
+
+    @user.setter
+    def user(self, value):
+        from .user import User
+
+        if not isinstance(value, User):
+            raise ValueError("Review user must be a User")
+
+        self._user = value
+
     def to_dict(self):
         return {
             "id": self.id,

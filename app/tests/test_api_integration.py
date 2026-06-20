@@ -105,7 +105,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         )
 
         self.assertEqual(user_response.status_code, 201)
-        self.assertEqual(duplicate_response.status_code, 409)
+        self.assertEqual(duplicate_response.status_code, 400)
         self.assertEqual(
             duplicate_response.get_json(),
             {
@@ -251,11 +251,11 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             self.client.get(
                 f"/api/v1/amenities/{amenity['id']}"
             ).get_json(),
-            self.client.put(
-                f"/api/v1/amenities/{amenity['id']}",
-                json={"name": "Parking"},
-            ).get_json(),
             self.client.get("/api/v1/amenities/").get_json()[0],
+        )
+        amenity_update_response = self.client.put(
+            f"/api/v1/amenities/{amenity['id']}",
+            json={"name": "Parking"},
         )
         review_responses = (
             review,
@@ -274,6 +274,12 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
 
         for response in amenity_responses:
             self.assertEqual(set(response), amenity_keys)
+
+        self.assertEqual(amenity_update_response.status_code, 200)
+        self.assertEqual(
+            amenity_update_response.get_json(),
+            {"message": "Amenity updated successfully"},
+        )
 
         for response in review_responses:
             self.assertEqual(set(response), review_keys)

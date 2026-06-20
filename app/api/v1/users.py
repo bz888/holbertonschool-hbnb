@@ -88,7 +88,7 @@ class UserList(Resource):
     @api.expect(user_model, validate=True)
     @api.response(201, "User successfully created")
     @api.response(400, "Invalid input data")
-    @api.response(409, "Email already registered")
+    @api.response(400, "Email already registered")
     def post(self):
         """Register a new user."""
         new_user = facade.create_user(api.payload)
@@ -112,7 +112,7 @@ class UserResource(Resource):
     @api.response(200, "User successfully updated")
     @api.response(400, "Invalid input data")
     @api.response(404, "User not found")
-    @api.response(409, "Email already registered")
+    @api.response(400, "Email already registered")
     def put(self, user_id):
         """Update user details by ID."""
         user = facade.update_user(user_id, api.payload)

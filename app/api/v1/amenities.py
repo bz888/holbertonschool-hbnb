@@ -45,15 +45,14 @@ class AmenityResource(Resource):
         amenity = facade.get_amenity(amenity_id)
         return amenity, 200
 
-    @api.marshal_with(amenity_response_model)
     @api.expect(amenity_update_model, validate=True)
     @api.response(200, 'Amenity successfully updated')
     @api.response(400, 'Invalid input data')
     @api.response(404, 'Amenity not found')
     def put(self, amenity_id):
         """Update an existing amenity"""
-        amenity = facade.update_amenity(amenity_id, api.payload)
-        return amenity, 200
+        facade.update_amenity(amenity_id, api.payload)
+        return {'message': 'Amenity updated successfully'}, 200
 
     @api.response(200, 'Amenity successfully deleted')
     @api.response(404, 'Amenity not found')

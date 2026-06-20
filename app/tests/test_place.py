@@ -33,6 +33,22 @@ class TestPlace(unittest.TestCase):
         self.assertEqual(place.reviews, [])
         self.assertEqual(place.amenities, [])
 
+    def test_place_requires_user_owner(self):
+        for invalid_owner in (None, "user-id", object()):
+            with self.subTest(invalid_owner=invalid_owner):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Place owner must be a User",
+                ):
+                    Place(
+                        "Cozy flat",
+                        "Small but bright",
+                        120.5,
+                        -37.8136,
+                        144.9631,
+                        invalid_owner,
+                    )
+
     def test_place_rejects_invalid_title(self):
         for title in ("", "   ", "P" * 101):
             with self.subTest(title=title):

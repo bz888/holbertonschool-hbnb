@@ -53,7 +53,7 @@ class TestApiErrorHandlers(unittest.TestCase):
         self.assertEqual(body, {"error": "Place 'missing' not found"})
         self.assertEqual(status, 404)
 
-    def test_duplicate_email_handler_returns_409(self):
+    def test_duplicate_email_handler_returns_400(self):
         body, status = handle_email_already_registered(
             EmailAlreadyRegistered("ada@example.com")
         )
@@ -62,7 +62,7 @@ class TestApiErrorHandlers(unittest.TestCase):
             body,
             {"error": "Email 'ada@example.com' is already registered"},
         )
-        self.assertEqual(status, 409)
+        self.assertEqual(status, 400)
 
     def test_invalid_request_handler_returns_400(self):
         body, status = handle_invalid_request(

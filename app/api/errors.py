@@ -15,8 +15,8 @@ def handle_not_found(error):
 
 
 def handle_email_already_registered(error):
-    """Convert duplicate email errors into HTTP 409 responses."""
-    return _error_response(error), 409
+    """Convert duplicate email errors into HTTP 400 responses."""
+    return _error_response(error), 400
 
 
 def handle_invalid_request(error):

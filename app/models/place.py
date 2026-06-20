@@ -85,6 +85,19 @@ class Place(BaseModel):
             180,
         )
 
+    @property
+    def owner(self):
+        return self._owner
+
+    @owner.setter
+    def owner(self, value):
+        from .user import User
+
+        if not isinstance(value, User):
+            raise ValueError("Place owner must be a User")
+
+        self._owner = value
+
     @staticmethod
     def _validate_coordinate(value, field_name, minimum, maximum):
         if (

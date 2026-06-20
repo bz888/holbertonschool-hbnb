@@ -26,6 +26,33 @@ class TestReview(unittest.TestCase):
         self.assertEqual(review.place, self.place)
         self.assertEqual(review.user, self.user)
 
+    def test_review_requires_place_and_user_instances(self):
+        for invalid_place in (None, "place-id", object()):
+            with self.subTest(invalid_place=invalid_place):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Review place must be a Place",
+                ):
+                    Review(
+                        "Great stay",
+                        5,
+                        invalid_place,
+                        self.user,
+                    )
+
+        for invalid_user in (None, "user-id", object()):
+            with self.subTest(invalid_user=invalid_user):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Review user must be a User",
+                ):
+                    Review(
+                        "Great stay",
+                        5,
+                        self.place,
+                        invalid_user,
+                    )
+
     def test_review_rejects_empty_text(self):
         for text in ("", "   "):
             with self.subTest(text=text):
