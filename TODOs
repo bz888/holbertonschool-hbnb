@@ -24,7 +24,6 @@ TODO (Catch up with Jonathan 17 JUN)
 
 ### Consistency across code, facade layer should handle any logics, such as isExisting user or not, and the API layer should only handle the request and response, and call the facade layer accordingly.
 
-
 ### ensure working tests
 
 ### postman collection

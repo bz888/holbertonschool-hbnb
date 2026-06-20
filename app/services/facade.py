@@ -1,4 +1,5 @@
 from utils.errors.amenity import AmenityNotFound
+from utils.errors.place import PlaceNotFound
 from utils.errors.user import EmailAlreadyRegistered, UserNotFound
 from models.amenity import Amenity
 from models.place import Place
@@ -148,13 +149,19 @@ class HBnBFacade:
         return self.place_repo.add(place)
 
     def get_place(self, place_id):
-        return self.place_repo.get(place_id)
+        place = self.place_repo.get(place_id)
+        if place is None:
+            raise PlaceNotFound(place_id)
+        return place
 
     def get_all_places(self):
         return self.place_repo.get_all()
 
     def update_place(self, place_id, place_data):
         data = place_data.copy()
+        place = self.place_repo.get(place_id)
+        if place is None:
+            raise PlaceNotFound(place_id)
 
         if "owner_id" in data:
             owner = self.user_repo.get(data.pop("owner_id"))
@@ -173,25 +180,27 @@ class HBnBFacade:
                 amenities.append(amenity)
             data["amenities"] = amenities
 
-        place = self.place_repo.get(place_id)
-        if place is None:
-            return None
-
         if "amenities" in data:
             place.amenities = []
             for amenity in data.pop("amenities"):
                 place.add_amenity(amenity)
 
-        return self.place_repo.update(place_id, data)
+        updated_place = self.place_repo.update(place_id, data)
+        if updated_place is None:
+            raise PlaceNotFound(place_id)
+        return updated_place
 
     def delete_place(self, place_id):
-        return self.place_repo.delete(place_id)
+        place = self.place_repo.delete(place_id)
+        if place is None:
+            raise PlaceNotFound(place_id)
+        return place
 
     def create_review(self, review_data):
         data = review_data.copy()
         place = self.place_repo.get(data["place_id"])
         if place is None:
-            raise ValueError("place does not exist")
+            raise PlaceNotFound(data["place_id"])
 
         user = self.user_repo.get(data["user_id"])
         if user is None:
@@ -212,6 +221,9 @@ class HBnBFacade:
         return self.review_repo.get_all()
 
     def get_reviews_by_place(self, place_id):
+        if self.place_repo.get(place_id) is None:
+            raise PlaceNotFound(place_id)
+
         return [
             review
             for review in self.review_repo.get_all()

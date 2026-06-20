@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from services import facade
+from utils.errors.place import PlaceNotFound
 
 api = Namespace('places', description='Place operations')
 
@@ -55,10 +56,11 @@ class PlaceResource(Resource):
     @api.response(404, 'Place not found')
     def get(self, place_id):
         """Get place details by ID"""
-        place = facade.get_place(place_id)
-        if not place:
+        try:
+            place = facade.get_place(place_id)
+            return place.to_dict(), 200
+        except PlaceNotFound:
             return {'error': 'Place not found'}, 404
-        return place.to_dict(), 200
 
     @api.expect(place_update_model, validate=True)
     @api.response(200, 'Place successfully updated')
@@ -66,27 +68,23 @@ class PlaceResource(Resource):
     @api.response(404, 'Place not found')
     def put(self, place_id):
         """Update place details by ID"""
-        if not facade.get_place(place_id):
-            return {'error': 'Place not found'}, 404
-
         try:
             place = facade.update_place(place_id, api.payload)
+            return place.to_dict(), 200
+        except PlaceNotFound:
+            return {'error': 'Place not found'}, 404
         except ValueError as exc:
             return {'error': str(exc)}, 400
-        if not place:
-            return {'error': 'Place not found'}, 404
-
-        return place.to_dict(), 200
 
     @api.response(200, 'Place successfully deleted')
     @api.response(404, 'Place not found')
     def delete(self, place_id):
         """Delete place by ID"""
-        place = facade.delete_place(place_id)
-        if not place:
+        try:
+            facade.delete_place(place_id)
+            return {'message': 'Place deleted successfully'}, 200
+        except PlaceNotFound:
             return {'error': 'Place not found'}, 404
-        return {'message': 'Place deleted successfully'}, 200
-
 
 @api.route('/<place_id>/reviews')
 class PlaceReviewList(Resource):
@@ -94,10 +92,11 @@ class PlaceReviewList(Resource):
     @api.response(404, 'Place not found')
     def get(self, place_id):
         """List all reviews for a place"""
-        if not facade.get_place(place_id):
+        try:
+            reviews = facade.get_reviews_by_place(place_id)
+            return [review.to_dict() for review in reviews], 200
+        except PlaceNotFound:
             return {'error': 'Place not found'}, 404
-        reviews = facade.get_reviews_by_place(place_id)
-        return [review.to_dict() for review in reviews], 200
 
     @api.expect(review_for_place_model, validate=True)
     @api.response(201, 'Review successfully created')
@@ -105,15 +104,13 @@ class PlaceReviewList(Resource):
     @api.response(404, 'Place not found')
     def post(self, place_id):
         """Create a review for a place"""
-        if not facade.get_place(place_id):
-            return {'error': 'Place not found'}, 404
-
         review_data = api.payload.copy()
         review_data['place_id'] = place_id
 
         try:
             review = facade.create_review(review_data)
+            return review.to_dict(), 201
+        except PlaceNotFound:
+            return {'error': 'Place not found'}, 404
         except ValueError as exc:
             return {'error': str(exc)}, 400
-
-        return review.to_dict(), 201
