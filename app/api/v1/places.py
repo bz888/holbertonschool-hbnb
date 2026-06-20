@@ -39,6 +39,10 @@ place_review_response_model = api.model('PlaceReviewResponse', {
     'id': fields.String(description='Review ID'),
     'text': fields.String(description='Review text'),
     'rating': fields.Integer(description='Rating from 1 to 5'),
+    'place_id': fields.String(
+        attribute=lambda review: review.place.id,
+        description='ID of the reviewed place'
+    ),
     'user_id': fields.String(
         attribute=lambda review: review.user.id,
         description='ID of the review author'
@@ -124,13 +128,14 @@ class PlaceResource(Resource):
 
 @api.route('/<place_id>/reviews')
 class PlaceReviewList(Resource):
+    @api.marshal_list_with(place_review_response_model)
     @api.response(200, 'Reviews retrieved successfully')
     @api.response(404, 'Place not found')
     def get(self, place_id):
         """List all reviews for a place"""
-        reviews = facade.get_reviews_by_place(place_id)
-        return [review.to_dict() for review in reviews], 200
+        return facade.get_reviews_by_place(place_id), 200
 
+    @api.marshal_with(place_review_response_model)
     @api.expect(review_for_place_model, validate=True)
     @api.response(201, 'Review successfully created')
     @api.response(400, 'Invalid input data')
@@ -141,4 +146,4 @@ class PlaceReviewList(Resource):
         review_data['place_id'] = place_id
 
         review = facade.create_review(review_data)
-        return review.to_dict(), 201
+        return review, 201

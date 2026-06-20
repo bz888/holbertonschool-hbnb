@@ -194,6 +194,98 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.assertIn("created_at", user.to_dict())
         self.assertIn("updated_at", user.to_dict())
 
+    def test_amenity_and_review_responses_exclude_timestamps(self):
+        owner = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Owner",
+                "last_name": "User",
+                "email": "owner@example.com",
+            },
+        ).get_json()
+        reviewer = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Review",
+                "last_name": "Author",
+                "email": "reviewer@example.com",
+            },
+        ).get_json()
+        amenity = self.client.post(
+            "/api/v1/amenities/",
+            json={"name": "Wi-Fi"},
+        ).get_json()
+        place = self.client.post(
+            "/api/v1/places/",
+            json={
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100,
+                "latitude": 0,
+                "longitude": 0,
+                "owner_id": owner["id"],
+                "amenity_ids": [amenity["id"]],
+            },
+        ).get_json()
+        review = self.client.post(
+            "/api/v1/reviews/",
+            json={
+                "text": "Great stay",
+                "rating": 5,
+                "user_id": reviewer["id"],
+                "place_id": place["id"],
+            },
+        ).get_json()
+
+        amenity_keys = {"id", "name"}
+        review_keys = {
+            "id",
+            "text",
+            "rating",
+            "place_id",
+            "user_id",
+        }
+
+        amenity_responses = (
+            amenity,
+            self.client.get(
+                f"/api/v1/amenities/{amenity['id']}"
+            ).get_json(),
+            self.client.put(
+                f"/api/v1/amenities/{amenity['id']}",
+                json={"name": "Parking"},
+            ).get_json(),
+            self.client.get("/api/v1/amenities/").get_json()[0],
+        )
+        review_responses = (
+            review,
+            self.client.get(
+                f"/api/v1/reviews/{review['id']}"
+            ).get_json(),
+            self.client.put(
+                f"/api/v1/reviews/{review['id']}",
+                json={"rating": 4},
+            ).get_json(),
+            self.client.get("/api/v1/reviews/").get_json()[0],
+            self.client.get(
+                f"/api/v1/users/{reviewer['id']}/reviews"
+            ).get_json()[0],
+        )
+
+        for response in amenity_responses:
+            self.assertEqual(set(response), amenity_keys)
+
+        for response in review_responses:
+            self.assertEqual(set(response), review_keys)
+
+        place_review = self.client.get(
+            f"/api/v1/places/{place['id']}/reviews"
+        ).get_json()[0]
+        self.assertEqual(
+            set(place_review),
+            {"id", "text", "rating", "place_id", "user_id"},
+        )
+
     def test_user_soft_and_hard_delete_routes(self):
         soft_user_response = self.client.post(
             "/api/v1/users/",
@@ -362,6 +454,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                     "id": review["id"],
                     "text": "Great stay",
                     "rating": 5,
+                    "place_id": place["id"],
                     "user_id": reviewer["id"],
                 }
             ],

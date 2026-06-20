@@ -56,6 +56,23 @@ user_response_model = api.model(
     },
 )
 
+user_review_response_model = api.model(
+    "UserReviewResponse",
+    {
+        "id": fields.String(description="ID of the review"),
+        "text": fields.String(description="Review text"),
+        "rating": fields.Integer(description="Rating from 1 to 5"),
+        "place_id": fields.String(
+            attribute=lambda review: review.place.id,
+            description="ID of the reviewed place",
+        ),
+        "user_id": fields.String(
+            attribute=lambda review: review.user.id,
+            description="ID of the review author",
+        ),
+    },
+)
+
 
 @api.route("/")
 class UserList(Resource):
@@ -125,9 +142,9 @@ class UserSoftDeleteResource(Resource):
 class UserReviewList(Resource):
     """Handle review listing for a user."""
 
+    @api.marshal_list_with(user_review_response_model)
     @api.response(200, "Reviews retrieved successfully")
     @api.response(404, "User not found")
     def get(self, user_id):
         """List reviews written by a user."""
-        reviews = facade.get_reviews_by_user(user_id)
-        return [review.to_dict() for review in reviews], 200
+        return facade.get_reviews_by_user(user_id), 200
