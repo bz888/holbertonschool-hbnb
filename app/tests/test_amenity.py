@@ -61,6 +61,16 @@ class TestAmenity(unittest.TestCase):
         with self.assertRaises(ValueError):
             facade.create_amenity({"name": "  "})
 
+        amenity = facade.create_amenity({"name": "Wi-Fi"})
+
+        for invalid_data in ({}, {"name": None}, {"name": "  "}):
+            with self.subTest(invalid_data=invalid_data):
+                with self.assertRaises(ValueError):
+                    facade.update_amenity(
+                        amenity.id,
+                        invalid_data,
+                    )
+
     def test_update_raises_when_amenity_does_not_exist(self):
         facade = HBnBFacade()
 

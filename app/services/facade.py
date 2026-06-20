@@ -132,6 +132,11 @@ class HBnBFacade:
         if amenity is None:
             raise AmenityNotFound(amenity_id)
 
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(
+                "Amenity name must be a non-empty string"
+            )
+
         updated_amenity = self.amenity_repo.update(
             amenity_id,
             {"name": name.strip()},

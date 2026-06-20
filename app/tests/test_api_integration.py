@@ -33,6 +33,11 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.client = self.app.test_client()
 
     def test_not_found_and_validation_errors_use_global_handlers(self):
+        amenity = self.client.post(
+            "/api/v1/amenities/",
+            json={"name": "Wi-Fi"},
+        ).get_json()
+
         checks = (
             (
                 self.client.get("/api/v1/users/missing"),
@@ -58,6 +63,18 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.post(
                     "/api/v1/amenities/",
                     json={"name": "   "},
+                ),
+                400,
+                {
+                    "error": (
+                        "Amenity name must be a non-empty string"
+                    )
+                },
+            ),
+            (
+                self.client.put(
+                    f"/api/v1/amenities/{amenity['id']}",
+                    json={},
                 ),
                 400,
                 {
