@@ -1,7 +1,5 @@
 from flask_restx import Namespace, Resource, fields
 from services import facade
-from utils.errors.place import PlaceNotFound
-from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
 
 api = Namespace('reviews', description='Review operations')
 review_model = api.model('Review', {
@@ -32,11 +30,8 @@ class ReviewResource(Resource):
     @api.response(404, 'Review not found')
     def get(self, review_id):
         """Get review details by ID"""
-        try:
-            review = facade.get_review(review_id)
-            return review.to_dict(), 200
-        except ReviewNotFound:
-            return {'error': 'Review not found'}, 404
+        review = facade.get_review(review_id)
+        return review.to_dict(), 200
 
     @api.expect(review_update_model, validate=True)
     @api.response(200, 'Review successfully updated')
@@ -44,22 +39,12 @@ class ReviewResource(Resource):
     @api.response(404, 'Review not found')
     def put(self, review_id):
         """Update review details by ID"""
-        try:
-            review = facade.update_review(review_id, api.payload)
-            return review.to_dict(), 200
-        except ReviewNotFound:
-            return {'error': 'Review not found'}, 404
-        except PlaceNotFound:
-            return {'error': 'Place not found'}, 404
-        except ValueError as exc:
-            return {'error': str(exc)}, 400
+        review = facade.update_review(review_id, api.payload)
+        return review.to_dict(), 200
 
     @api.response(200, 'Review successfully deleted')
     @api.response(404, 'Review not found')
     def delete(self, review_id):
         """Delete review by ID"""
-        try:
-            facade.delete_review(review_id)
-            return {'message': 'Review deleted successfully'}, 200
-        except ReviewNotFound:
-            return {'error': 'Review not found'}, 404
+        facade.delete_review(review_id)
+        return {'message': 'Review deleted successfully'}, 200

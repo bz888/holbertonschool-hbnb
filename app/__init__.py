@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_restx import Api
+from api.errors import register_error_handlers
 from api.v1.amenities import api as amenities_ns
 from api.v1.places import api as places_ns
 from api.v1.reviews import api as reviews_ns
@@ -12,6 +13,7 @@ def create_app(config_name='default'):
     app.config.from_object(config[config_name])
 
     api = Api(app, version='1.0', title='HBnB API', description='HBnB Application API', doc='/api/v1/')
+    register_error_handlers(api)
 
     api.add_namespace(users_ns, path='/api/v1/users')
     api.add_namespace(amenities_ns, path='/api/v1/amenities')

@@ -21,7 +21,11 @@ class HBnBFacade:
     def create_user(self, user_data):
         """Create and store a user."""
         email = user_data["email"]
-        if self.user_repo.get_by_attribute("email", email):
+        existing_user = self.user_repo.find_one(
+            email=email,
+            is_active=True,
+        )
+        if existing_user:
             raise EmailAlreadyRegistered(email)
 
         user = User(**user_data)
@@ -30,29 +34,32 @@ class HBnBFacade:
     def get_user(self, user_id):
         """Return a user by ID or raise UserNotFound."""
         user = self.user_repo.get(user_id)
-        if user is None:
+        if user is None or not user.is_active:
             raise UserNotFound(user_id)
         return user
 
     def get_user_by_email(self, email):
         """Return the user with the given email, if one exists."""
-        return self.user_repo.get_by_attribute("email", email)
+        return self.user_repo.find_one(
+            email=email,
+            is_active=True,
+        )
 
     def get_all_users(self):
-        """Return all users."""
-        return self.user_repo.get_all()
+        """Return all active users."""
+        return self.user_repo.find_all(is_active=True)
 
     def update_user(self, user_id, user_data) -> User:
         """Update and return a user."""
         user = self.user_repo.get(user_id)
-        if user is None:
+        if user is None or not user.is_active:
             raise UserNotFound(user_id)
 
         if "email" in user_data:
             email = user_data["email"]
-            existing_user = self.user_repo.get_by_attribute(
-                "email",
-                email,
+            existing_user = self.user_repo.find_one(
+                email=email,
+                is_active=True,
             )
 
             if existing_user and existing_user.id != user.id:
@@ -66,12 +73,22 @@ class HBnBFacade:
         return updated_user
 
     def delete_user(self, user_id):
-        """Delete a user or raise UserNotFound."""
+        """Deactivate a user and their places while preserving reviews."""
         user = self.user_repo.get(user_id)
-        if user is None:
+        if user is None or not user.is_active:
             raise UserNotFound(user_id)
 
-        return self.user_repo.delete(user_id)
+        user.is_active = False
+        user.save()
+
+        for place in self.place_repo.find_all(
+            owner=user,
+            is_active=True,
+        ):
+            place.is_active = False
+            place.save()
+
+        return user
 
     def create_amenity(self, amenity_data):
         name = amenity_data.get("name")
@@ -120,7 +137,7 @@ class HBnBFacade:
     def create_place(self, place_data):
         data = place_data.copy()
         owner = self.user_repo.get(data["owner_id"])
-        if owner is None:
+        if owner is None or not owner.is_active:
             raise UserNotFound(data["owner_id"])
 
         amenity_ids = data.pop("amenity_ids", [])
@@ -149,23 +166,24 @@ class HBnBFacade:
 
     def get_place(self, place_id):
         place = self.place_repo.get(place_id)
-        if place is None:
+        if place is None or not place.is_active:
             raise PlaceNotFound(place_id)
         return place
 
     def get_all_places(self):
-        return self.place_repo.get_all()
+        return self.place_repo.find_all(is_active=True)
 
     def update_place(self, place_id, place_data):
         data = place_data.copy()
         place = self.place_repo.get(place_id)
-        if place is None:
+        if place is None or not place.is_active:
             raise PlaceNotFound(place_id)
 
         if "owner_id" in data:
-            owner = self.user_repo.get(data.pop("owner_id"))
-            if owner is None:
-                raise UserNotFound(data["owner_id"])
+            owner_id = data.pop("owner_id")
+            owner = self.user_repo.get(owner_id)
+            if owner is None or not owner.is_active:
+                raise UserNotFound(owner_id)
             data["owner"] = owner
 
         if "amenity_ids" in data:
@@ -182,25 +200,33 @@ class HBnBFacade:
             for amenity in data.pop("amenities"):
                 place.add_amenity(amenity)
 
+        if "owner" in data and data["owner"] is not place.owner:
+            if place in place.owner.places:
+                place.owner.places.remove(place)
+            data["owner"].add_place(place)
+
         updated_place = self.place_repo.update(place_id, data)
         if updated_place is None:
             raise PlaceNotFound(place_id)
         return updated_place
 
     def delete_place(self, place_id):
-        place = self.place_repo.delete(place_id)
-        if place is None:
+        place = self.place_repo.get(place_id)
+        if place is None or not place.is_active:
             raise PlaceNotFound(place_id)
+
+        place.is_active = False
+        place.save()
         return place
 
     def create_review(self, review_data):
         data = review_data.copy()
         place = self.place_repo.get(data["place_id"])
-        if place is None:
+        if place is None or not place.is_active:
             raise PlaceNotFound(data["place_id"])
 
         user = self.user_repo.get(data["user_id"])
-        if user is None:
+        if user is None or not user.is_active:
             raise UserNotFound(data["user_id"])
 
         if user.id == place.owner.id:
@@ -224,14 +250,18 @@ class HBnBFacade:
         return self.review_repo.get_all()
 
     def get_reviews_by_place(self, place_id):
-        if self.place_repo.get(place_id) is None:
+        place = self.place_repo.get(place_id)
+        if place is None or not place.is_active:
             raise PlaceNotFound(place_id)
 
-        return [
-            review
-            for review in self.review_repo.get_all()
-            if review.place.id == place_id
-        ]
+        return self.review_repo.find_all(place=place)
+
+    def get_reviews_by_user(self, user_id):
+        user = self.user_repo.get(user_id)
+        if user is None or not user.is_active:
+            raise UserNotFound(user_id)
+
+        return self.review_repo.find_all(user=user)
 
     def update_review(self, review_id, review_data):
         data = review_data.copy()
@@ -242,14 +272,32 @@ class HBnBFacade:
         if "place_id" in data:
             place_id = data.pop("place_id")
             place = self.place_repo.get(place_id)
-            if place is None:
+            if place is None or not place.is_active:
                 raise PlaceNotFound(place_id)
-            data["place"] = place
+        else:
+            place = review.place
 
         if "user_id" in data:
-            user = self.user_repo.get(data.pop("user_id"))
-            if user is None:
-                raise UserNotFound(data["user_id"])
+            user_id = data.pop("user_id")
+            user = self.user_repo.get(user_id)
+            if user is None or not user.is_active:
+                raise UserNotFound(user_id)
+        else:
+            user = review.user
+
+        if user.id == place.owner.id:
+            raise OwnerCannotReviewOwnPlace()
+
+        if place is not review.place:
+            if review in review.place.reviews:
+                review.place.reviews.remove(review)
+            place.add_review(review)
+            data["place"] = place
+
+        if user is not review.user:
+            if review in review.user.reviews:
+                review.user.reviews.remove(review)
+            user.add_review(review)
             data["user"] = user
 
         updated_review = self.review_repo.update(review_id, data)
@@ -261,4 +309,10 @@ class HBnBFacade:
         review = self.review_repo.delete(review_id)
         if review is None:
             raise ReviewNotFound(review_id)
+
+        if review in review.place.reviews:
+            review.place.reviews.remove(review)
+        if review in review.user.reviews:
+            review.user.reviews.remove(review)
+
         return review

@@ -9,7 +9,8 @@ from models.review import Review
 from models.user import User
 from services.facade import HBnBFacade
 from utils.errors.place import PlaceNotFound
-from utils.errors.review import OwnerCannotReviewOwnPlace
+from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
+from utils.errors.user import UserNotFound
 
 
 class TestReview(unittest.TestCase):
@@ -106,6 +107,102 @@ class TestReview(unittest.TestCase):
                     "user_id": owner.id,
                 }
             )
+
+    def test_reviews_can_be_listed_by_user(self):
+        facade, _, reviewer, _, review = self._create_review(facade=HBnBFacade())
+
+        self.assertEqual(
+            facade.get_reviews_by_user(reviewer.id),
+            [review],
+        )
+
+    def test_deleting_reviewer_preserves_review(self):
+        facade, _, reviewer, place, review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        facade.delete_user(reviewer.id)
+
+        self.assertFalse(reviewer.is_active)
+        self.assertTrue(place.is_active)
+        self.assertIs(facade.get_review(review.id), review)
+        self.assertIn(review, facade.get_all_reviews())
+        self.assertIn(review, place.reviews)
+        self.assertEqual(review.to_dict()["user_id"], reviewer.id)
+        with self.assertRaises(UserNotFound):
+            facade.get_reviews_by_user(reviewer.id)
+
+    def test_deleting_place_preserves_review(self):
+        facade, _, _, place, review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        facade.delete_place(place.id)
+
+        self.assertFalse(place.is_active)
+        self.assertIs(facade.get_review(review.id), review)
+        self.assertIn(review, facade.get_all_reviews())
+        self.assertEqual(review.to_dict()["place_id"], place.id)
+        with self.assertRaises(PlaceNotFound):
+            facade.get_reviews_by_place(place.id)
+
+    def test_deleting_owner_deactivates_owned_places(self):
+        facade, owner, _, place, review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        facade.delete_user(owner.id)
+
+        self.assertFalse(owner.is_active)
+        self.assertFalse(place.is_active)
+        self.assertIs(facade.get_review(review.id), review)
+
+    def test_deleting_review_unlinks_relationships(self):
+        facade, _, reviewer, place, review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        facade.delete_review(review.id)
+
+        self.assertNotIn(review, reviewer.reviews)
+        self.assertNotIn(review, place.reviews)
+        with self.assertRaises(ReviewNotFound):
+            facade.get_review(review.id)
+
+    def _create_review(self, facade):
+        owner = facade.create_user(
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+            }
+        )
+        reviewer = facade.create_user(
+            {
+                "first_name": "Grace",
+                "last_name": "Hopper",
+                "email": "grace@example.com",
+            }
+        )
+        place = facade.create_place(
+            {
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100.0,
+                "latitude": 0.0,
+                "longitude": 0.0,
+                "owner_id": owner.id,
+            }
+        )
+        review = facade.create_review(
+            {
+                "text": "Great stay",
+                "rating": 5,
+                "place_id": place.id,
+                "user_id": reviewer.id,
+            }
+        )
+        return facade, owner, reviewer, place, review
 
 
 if __name__ == "__main__":

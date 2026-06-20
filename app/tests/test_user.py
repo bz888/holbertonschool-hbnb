@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from models.user import User
 from services.facade import HBnBFacade
+from utils.errors.user import EmailAlreadyRegistered, UserNotFound
 
 
 class TestUser(unittest.TestCase):
@@ -16,6 +17,7 @@ class TestUser(unittest.TestCase):
         self.assertEqual(user.last_name, "Lovelace")
         self.assertEqual(user.email, "ada@example.com")
         self.assertFalse(user.is_admin)
+        self.assertTrue(user.is_active)
         self.assertEqual(user.places, [])
         self.assertEqual(user.reviews, [])
 
@@ -45,7 +47,7 @@ class TestUser(unittest.TestCase):
             }
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(EmailAlreadyRegistered):
             facade.create_user(
                 {
                     "first_name": "Grace",
@@ -53,6 +55,24 @@ class TestUser(unittest.TestCase):
                     "email": "ada@example.com",
                 }
             )
+
+    def test_delete_user_soft_deletes_user(self):
+        facade = HBnBFacade()
+        user = facade.create_user(
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+            }
+        )
+
+        deleted_user = facade.delete_user(user.id)
+
+        self.assertIs(deleted_user, user)
+        self.assertFalse(user.is_active)
+        self.assertNotIn(user, facade.get_all_users())
+        with self.assertRaises(UserNotFound):
+            facade.get_user(user.id)
 
 
 if __name__ == "__main__":

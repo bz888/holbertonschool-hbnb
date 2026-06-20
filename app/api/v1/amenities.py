@@ -1,6 +1,5 @@
 from flask_restx import Namespace, Resource, fields
 from services import facade
-from utils.errors.amenity import AmenityNotFound
 
 api = Namespace('amenities', description='Amenity operations')
 
@@ -25,11 +24,8 @@ class AmenityList(Resource):
     @api.response(400, 'Invalid input data')
     def post(self):
         """Create a new amenity"""
-        try:
-            amenity = facade.create_amenity(api.payload)
-            return amenity.to_dict(), 201
-        except ValueError as exc:
-            return {'error': str(exc)}, 400
+        amenity = facade.create_amenity(api.payload)
+        return amenity.to_dict(), 201
 
 
 @api.route('/<amenity_id>')
@@ -38,29 +34,20 @@ class AmenityResource(Resource):
     @api.response(404, 'Amenity not found')
     def get(self, amenity_id):
         """Get amenity details by ID"""
-        try:
-            amenity = facade.get_amenity(amenity_id)
-            return amenity.to_dict(), 200
-        except AmenityNotFound:
-            return {'error': 'Amenity not found'}, 404
+        amenity = facade.get_amenity(amenity_id)
+        return amenity.to_dict(), 200
 
     @api.expect(amenity_update_model, validate=True)
     @api.response(200, 'Amenity successfully updated')
     @api.response(400, 'Invalid input data')
     def put(self, amenity_id):
         """Update an amenity, adding it if it does not exist"""
-        try:
-            amenity = facade.update_amenity(amenity_id, api.payload)
-            return amenity.to_dict(), 200
-        except ValueError as exc:
-            return {'error': str(exc)}, 400
+        amenity = facade.update_amenity(amenity_id, api.payload)
+        return amenity.to_dict(), 200
 
     @api.response(200, 'Amenity successfully deleted')
     @api.response(404, 'Amenity not found')
     def delete(self, amenity_id):
         """Delete amenity by ID"""
-        try:
-            facade.delete_amenity(amenity_id)
-            return {'message': 'Amenity deleted successfully'}, 200
-        except AmenityNotFound:
-            return {'error': 'Amenity not found'}, 404
+        facade.delete_amenity(amenity_id)
+        return {'message': 'Amenity deleted successfully'}, 200
