@@ -1,3 +1,4 @@
+from utils.error import EmailAlreadyRegistered, UserNotFound
 from models.amenity import Amenity
 from models.place import Place
 from models.review import Review
@@ -6,7 +7,7 @@ from persistence.repository import InMemoryRepository
 
 
 class HBnBFacade:
-    """Facade that coordinates models and in-memory repositories."""
+    """Coordinate models and in-memory repositories."""
 
     def __init__(self):
         self.user_repo = InMemoryRepository()
@@ -15,29 +16,58 @@ class HBnBFacade:
         self.amenity_repo = InMemoryRepository()
 
     def create_user(self, user_data):
-        if self.user_repo.get_by_attribute("email", user_data["email"]):
-            raise ValueError("email is already registered")
+        """Create and store a user."""
+        email = user_data["email"]
+        if self.user_repo.get_by_attribute("email", email):
+            raise EmailAlreadyRegistered(email)
 
         user = User(**user_data)
         return self.user_repo.add(user)
 
     def get_user(self, user_id):
-        return self.user_repo.get(user_id)
+        """Return a user by ID or raise UserNotFound."""
+        user = self.user_repo.get(user_id)
+        if user is None:
+            raise UserNotFound(user_id)
+        return user
 
     def get_user_by_email(self, email):
+        """Return the user with the given email, if one exists."""
         return self.user_repo.get_by_attribute("email", email)
 
     def get_all_users(self):
+        """Return all users."""
         return self.user_repo.get_all()
 
-    def update_user(self, user_id, user_data):
+    def update_user(self, user_id, user_data) -> User:
+        """Update and return a user."""
+        user = self.user_repo.get(user_id)
+        if user is None:
+            raise UserNotFound(user_id)
+
         if "email" in user_data:
-            existing = self.user_repo.get_by_attribute("email", user_data["email"])
-            if existing and existing.id != user_id:
-                raise ValueError("email is already registered")
-        return self.user_repo.update(user_id, user_data)
+            email = user_data["email"]
+            existing_user = self.user_repo.get_by_attribute(
+                "email",
+                email,
+            )
+
+            if existing_user and existing_user.id != user.id:
+                raise EmailAlreadyRegistered(email)
+
+        updated_user = self.user_repo.update(user_id, user_data)
+
+        if updated_user is None:
+            raise UserNotFound(user_id)
+
+        return updated_user
 
     def delete_user(self, user_id):
+        """Delete a user or raise UserNotFound."""
+        user = self.user_repo.get(user_id)
+        if user is None:
+            raise UserNotFound(user_id)
+
         return self.user_repo.delete(user_id)
 
     def create_amenity(self, amenity_data):
@@ -67,7 +97,9 @@ class HBnBFacade:
         for amenity_id in amenity_ids:
             amenity = self.amenity_repo.get(amenity_id)
             if amenity is None:
-                raise ValueError(f"amenity does not exist: {amenity_id}")
+                raise ValueError(
+                    f"amenity does not exist: {amenity_id}"
+                )
             amenities.append(amenity)
 
         data.pop("owner_id")
@@ -106,7 +138,9 @@ class HBnBFacade:
             for amenity_id in data.pop("amenity_ids"):
                 amenity = self.amenity_repo.get(amenity_id)
                 if amenity is None:
-                    raise ValueError(f"amenity does not exist: {amenity_id}")
+                    raise ValueError(
+                        f"amenity does not exist: {amenity_id}"
+                    )
                 amenities.append(amenity)
             data["amenities"] = amenities
 
@@ -150,7 +184,9 @@ class HBnBFacade:
 
     def get_reviews_by_place(self, place_id):
         return [
-            review for review in self.review_repo.get_all() if review.place.id == place_id
+            review
+            for review in self.review_repo.get_all()
+            if review.place.id == place_id
         ]
 
     def update_review(self, review_id, review_data):
