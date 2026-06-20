@@ -15,6 +15,32 @@ class TestAmenity(unittest.TestCase):
 
         self.assertEqual(amenity.name, "Wi-Fi")
 
+    def test_amenity_trims_name(self):
+        amenity = Amenity("  Wi-Fi  ")
+
+        self.assertEqual(amenity.name, "Wi-Fi")
+
+    def test_amenity_rejects_empty_name(self):
+        for name in ("", "   "):
+            with self.subTest(name=name):
+                with self.assertRaises(ValueError):
+                    Amenity(name)
+
+    def test_amenity_rejects_name_longer_than_50_characters(self):
+        with self.assertRaises(ValueError):
+            Amenity("A" * 51)
+
+    def test_amenity_accepts_name_at_50_character_boundary(self):
+        amenity = Amenity("A" * 50)
+
+        self.assertEqual(len(amenity.name), 50)
+
+    def test_amenity_update_uses_validation(self):
+        amenity = Amenity("Wi-Fi")
+
+        with self.assertRaises(ValueError):
+            amenity.update({"name": "   "})
+
     def test_to_dict(self):
         amenity = Amenity("Parking")
 

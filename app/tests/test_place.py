@@ -33,6 +33,100 @@ class TestPlace(unittest.TestCase):
         self.assertEqual(place.reviews, [])
         self.assertEqual(place.amenities, [])
 
+    def test_place_rejects_invalid_title(self):
+        for title in ("", "   ", "P" * 101):
+            with self.subTest(title=title):
+                with self.assertRaises(ValueError):
+                    Place(
+                        title,
+                        "Description",
+                        100.0,
+                        0.0,
+                        0.0,
+                        self.owner,
+                    )
+
+    def test_place_accepts_title_at_100_character_boundary(self):
+        place = Place(
+            "P" * 100,
+            "Description",
+            100.0,
+            0.0,
+            0.0,
+            self.owner,
+        )
+
+        self.assertEqual(len(place.title), 100)
+
+    def test_place_rejects_non_positive_price(self):
+        for price in (0, -1, True, "100"):
+            with self.subTest(price=price):
+                with self.assertRaises(ValueError):
+                    Place(
+                        "Flat",
+                        "Description",
+                        price,
+                        0.0,
+                        0.0,
+                        self.owner,
+                    )
+
+    def test_place_validates_coordinate_ranges(self):
+        invalid_coordinates = (
+            (-90.1, 0.0),
+            (90.1, 0.0),
+            (0.0, -180.1),
+            (0.0, 180.1),
+        )
+
+        for latitude, longitude in invalid_coordinates:
+            with self.subTest(
+                latitude=latitude,
+                longitude=longitude,
+            ):
+                with self.assertRaises(ValueError):
+                    Place(
+                        "Flat",
+                        "Description",
+                        100.0,
+                        latitude,
+                        longitude,
+                        self.owner,
+                    )
+
+    def test_place_accepts_coordinate_boundaries(self):
+        for latitude, longitude in (
+            (-90, -180),
+            (90, 180),
+        ):
+            with self.subTest(
+                latitude=latitude,
+                longitude=longitude,
+            ):
+                place = Place(
+                    "Flat",
+                    "Description",
+                    100.0,
+                    latitude,
+                    longitude,
+                    self.owner,
+                )
+                self.assertEqual(place.latitude, latitude)
+                self.assertEqual(place.longitude, longitude)
+
+    def test_place_update_uses_validation(self):
+        place = Place(
+            "Flat",
+            "Description",
+            100.0,
+            0.0,
+            0.0,
+            self.owner,
+        )
+
+        with self.assertRaises(ValueError):
+            place.update({"price": -10})
+
     def test_add_review(self):
         place = Place("Flat", "Nice flat", 100.0, 0.0, 0.0, self.owner)
         review = object()

@@ -20,7 +20,8 @@ class HBnBFacade:
 
     def create_user(self, user_data):
         """Create and store a user."""
-        email = user_data["email"]
+        data = user_data.copy()
+        email = User.normalize_email(data["email"])
         existing_user = self.user_repo.find_one(
             email=email,
             is_active=True,
@@ -28,7 +29,8 @@ class HBnBFacade:
         if existing_user:
             raise EmailAlreadyRegistered(email)
 
-        user = User(**user_data)
+        data["email"] = email
+        user = User(**data)
         return self.user_repo.add(user)
 
     def get_user(self, user_id):
@@ -40,6 +42,7 @@ class HBnBFacade:
 
     def get_user_by_email(self, email):
         """Return the user with the given email, if one exists."""
+        email = User.normalize_email(email)
         return self.user_repo.find_one(
             email=email,
             is_active=True,
@@ -56,7 +59,7 @@ class HBnBFacade:
             raise UserNotFound(user_id)
 
         if "email" in user_data:
-            email = user_data["email"]
+            email = User.normalize_email(user_data["email"])
             existing_user = self.user_repo.find_one(
                 email=email,
                 is_active=True,
@@ -64,6 +67,9 @@ class HBnBFacade:
 
             if existing_user and existing_user.id != user.id:
                 raise EmailAlreadyRegistered(email)
+
+            user_data = user_data.copy()
+            user_data["email"] = email
 
         updated_user = self.user_repo.update(user_id, user_data)
 

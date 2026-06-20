@@ -1,8 +1,14 @@
+import re
+
 from .base_model import BaseModel
 
 
 class User(BaseModel):
     """User model."""
+
+    EMAIL_PATTERN = re.compile(
+        r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    )
 
     def __init__(
         self,
@@ -20,6 +26,63 @@ class User(BaseModel):
         self.is_active = is_active
         self.places = []
         self.reviews = []
+
+    @property
+    def first_name(self):
+        return self._first_name
+
+    @first_name.setter
+    def first_name(self, value):
+        self._first_name = self._validate_name(
+            value,
+            "First name",
+        )
+
+    @property
+    def last_name(self):
+        return self._last_name
+
+    @last_name.setter
+    def last_name(self, value):
+        self._last_name = self._validate_name(
+            value,
+            "Last name",
+        )
+
+    @property
+    def email(self):
+        return self._email
+
+    @email.setter
+    def email(self, value):
+        self._email = self.normalize_email(value)
+
+    @classmethod
+    def normalize_email(cls, value):
+        """Validate and normalize an email address."""
+        if not isinstance(value, str):
+            raise ValueError("Email must be a string")
+
+        email = value.strip().lower()
+        if not cls.EMAIL_PATTERN.fullmatch(email):
+            raise ValueError("Email must be a valid email address")
+
+        return email
+
+    @staticmethod
+    def _validate_name(value, field_name):
+        if not isinstance(value, str):
+            raise ValueError(f"{field_name} must be a string")
+
+        name = value.strip()
+        if not name:
+            raise ValueError(f"{field_name} is required")
+        if len(name) > 50:
+            raise ValueError(
+                f"{field_name} must be 50 characters or fewer"
+            )
+
+        return name
 
     def add_place(self, place):
         """Add a place owned by the user."""

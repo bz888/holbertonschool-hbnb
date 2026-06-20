@@ -1,0 +1,410 @@
+{
+  "info": {
+    "_postman_id": "5dd65cf0-d878-4aa9-bca8-89eb94ddd75d",
+    "name": "HBnB API",
+    "description": "Postman collection covering all HBnB API v1 routes. Create an owner, reviewer, amenity, and place before running review requests. Run delete requests last.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:5000/api/v1"
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "reviewer_id",
+      "value": ""
+    },
+    {
+      "key": "amenity_id",
+      "value": ""
+    },
+    {
+      "key": "place_id",
+      "value": ""
+    },
+    {
+      "key": "review_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/users/"
+          }
+        },
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('user_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Ada\",\n  \"last_name\": \"Lovelace\",\n  \"email\": \"ada.{{$timestamp}}@example.com\"\n}"
+            },
+            "url": "{{base_url}}/users/"
+          }
+        },
+        {
+          "name": "Create Reviewer (Setup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('reviewer_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Grace\",\n  \"last_name\": \"Hopper\",\n  \"email\": \"grace.{{$timestamp}}@example.com\"\n}"
+            },
+            "url": "{{base_url}}/users/"
+          }
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/users/{{user_id}}"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Augusta Ada\"\n}"
+            },
+            "url": "{{base_url}}/users/{{user_id}}"
+          }
+        },
+        {
+          "name": "List Reviews Written by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/users/{{reviewer_id}}/reviews"
+          }
+        },
+        {
+          "name": "Delete User (Run Last)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/users/{{user_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Amenities",
+      "item": [
+        {
+          "name": "List Amenities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/amenities/"
+          }
+        },
+        {
+          "name": "Create Amenity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('amenity_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wi-Fi\"\n}"
+            },
+            "url": "{{base_url}}/amenities/"
+          }
+        },
+        {
+          "name": "Get Amenity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/amenities/{{amenity_id}}"
+          }
+        },
+        {
+          "name": "Update Amenity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"High-speed Wi-Fi\"\n}"
+            },
+            "url": "{{base_url}}/amenities/{{amenity_id}}"
+          }
+        },
+        {
+          "name": "Delete Amenity (Run Last)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/amenities/{{amenity_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Places",
+      "item": [
+        {
+          "name": "List Places",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/places/"
+          }
+        },
+        {
+          "name": "Create Place",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('place_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Melbourne Apartment\",\n  \"description\": \"Central apartment\",\n  \"price\": 150.0,\n  \"latitude\": -37.8136,\n  \"longitude\": 144.9631,\n  \"owner_id\": \"{{user_id}}\",\n  \"amenity_ids\": [\"{{amenity_id}}\"]\n}"
+            },
+            "url": "{{base_url}}/places/"
+          }
+        },
+        {
+          "name": "Get Place",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/places/{{place_id}}"
+          }
+        },
+        {
+          "name": "Update Place",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Melbourne Apartment\",\n  \"price\": 175.0\n}"
+            },
+            "url": "{{base_url}}/places/{{place_id}}"
+          }
+        },
+        {
+          "name": "List Reviews for Place",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/places/{{place_id}}/reviews"
+          }
+        },
+        {
+          "name": "Create Review for Place",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('review_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Great stay\",\n  \"rating\": 5,\n  \"user_id\": \"{{reviewer_id}}\"\n}"
+            },
+            "url": "{{base_url}}/places/{{place_id}}/reviews"
+          }
+        },
+        {
+          "name": "Delete Place (Run Last)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/places/{{place_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "List Reviews",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/reviews/"
+          }
+        },
+        {
+          "name": "Create Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('review_id', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Excellent location\",\n  \"rating\": 5,\n  \"user_id\": \"{{reviewer_id}}\",\n  \"place_id\": \"{{place_id}}\"\n}"
+            },
+            "url": "{{base_url}}/reviews/"
+          }
+        },
+        {
+          "name": "Get Review",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/reviews/{{review_id}}"
+          }
+        },
+        {
+          "name": "Update Review",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Updated review text\",\n  \"rating\": 4\n}"
+            },
+            "url": "{{base_url}}/reviews/{{review_id}}"
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/reviews/{{review_id}}"
+          }
+        }
+      ]
+    }
+  ]
+}

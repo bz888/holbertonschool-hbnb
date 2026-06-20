@@ -11,6 +11,38 @@ class Review(BaseModel):
         self.place = place
         self.user = user
 
+    @property
+    def text(self):
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Review text must be a string")
+
+        text = value.strip()
+        if not text:
+            raise ValueError("Review text is required")
+
+        self._text = text
+
+    @property
+    def rating(self):
+        return self._rating
+
+    @rating.setter
+    def rating(self, value):
+        if (
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or not 1 <= value <= 5
+        ):
+            raise ValueError(
+                "Review rating must be an integer from 1 to 5"
+            )
+
+        self._rating = value
+
     def to_dict(self):
         return {
             "id": self.id,

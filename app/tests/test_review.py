@@ -26,6 +26,50 @@ class TestReview(unittest.TestCase):
         self.assertEqual(review.place, self.place)
         self.assertEqual(review.user, self.user)
 
+    def test_review_rejects_empty_text(self):
+        for text in ("", "   "):
+            with self.subTest(text=text):
+                with self.assertRaises(ValueError):
+                    Review(
+                        text,
+                        5,
+                        self.place,
+                        self.user,
+                    )
+
+    def test_review_rejects_rating_outside_1_to_5(self):
+        for rating in (0, 6, -1, 1.5, True, "5"):
+            with self.subTest(rating=rating):
+                with self.assertRaises(ValueError):
+                    Review(
+                        "Great stay",
+                        rating,
+                        self.place,
+                        self.user,
+                    )
+
+    def test_review_accepts_rating_boundaries(self):
+        for rating in (1, 5):
+            with self.subTest(rating=rating):
+                review = Review(
+                    "Great stay",
+                    rating,
+                    self.place,
+                    self.user,
+                )
+                self.assertEqual(review.rating, rating)
+
+    def test_review_update_uses_validation(self):
+        review = Review(
+            "Great stay",
+            5,
+            self.place,
+            self.user,
+        )
+
+        with self.assertRaises(ValueError):
+            review.update({"rating": 6})
+
     def test_facade_validates_review_relationships_in_memory(self):
         facade = HBnBFacade()
 
