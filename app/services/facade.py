@@ -1,4 +1,5 @@
-from utils.error import EmailAlreadyRegistered, UserNotFound
+from utils.errors.amenity import AmenityNotFound
+from utils.errors.user import EmailAlreadyRegistered, UserNotFound
 from models.amenity import Amenity
 from models.place import Place
 from models.review import Review
@@ -71,20 +72,48 @@ class HBnBFacade:
         return self.user_repo.delete(user_id)
 
     def create_amenity(self, amenity_data):
-        amenity = Amenity(**amenity_data)
+        name = amenity_data.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError(
+                "Amenity name must be a non-empty string"
+            )
+
+        amenity = Amenity(name=name.strip())
         return self.amenity_repo.add(amenity)
 
     def get_amenity(self, amenity_id):
-        return self.amenity_repo.get(amenity_id)
+        amenity = self.amenity_repo.get(amenity_id)
+        if amenity is None:
+            raise AmenityNotFound(amenity_id)
+        return amenity
 
     def get_all_amenities(self):
         return self.amenity_repo.get_all()
 
     def update_amenity(self, amenity_id, amenity_data):
-        return self.amenity_repo.update(amenity_id, amenity_data)
+        name = amenity_data.get("name")
+
+        amenity = self.amenity_repo.get(amenity_id)
+        if amenity is None:
+            amenity = Amenity(name=name.strip())
+            amenity.id = amenity_id
+            self.amenity_repo.add(amenity)
+
+        updated_amenity = self.amenity_repo.update(
+            amenity_id,
+            {"name": name.strip()},
+        )
+
+        if updated_amenity is None:
+            raise AmenityNotFound(amenity_id)
+
+        return updated_amenity
 
     def delete_amenity(self, amenity_id):
-        return self.amenity_repo.delete(amenity_id)
+        amenity = self.amenity_repo.delete(amenity_id)
+        if amenity is None:
+            raise AmenityNotFound(amenity_id)
+        return amenity
 
     def create_place(self, place_data):
         data = place_data.copy()

@@ -1,6 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from services import facade
-from utils.error import EmailAlreadyRegistered, UserNotFound
+from utils.errors.user import EmailAlreadyRegistered, UserNotFound
 
 
 api = Namespace("users", description="User operations")
