@@ -70,6 +70,43 @@ class TestReview(unittest.TestCase):
         with self.assertRaises(ValueError):
             review.update({"rating": 6})
 
+    def test_facade_review_update_only_changes_text_and_rating(self):
+        facade, _, reviewer, place, review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        updated_review = facade.update_review(
+            review.id,
+            {
+                "text": "Updated review",
+                "rating": 4,
+            },
+        )
+
+        self.assertEqual(updated_review.text, "Updated review")
+        self.assertEqual(updated_review.rating, 4)
+        self.assertIs(updated_review.user, reviewer)
+        self.assertIs(updated_review.place, place)
+
+    def test_facade_review_update_rejects_relationship_fields(self):
+        facade, _, reviewer, place, review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        for field, value in (
+            ("user_id", "another-user"),
+            ("place_id", "another-place"),
+        ):
+            with self.subTest(field=field):
+                with self.assertRaises(ValueError):
+                    facade.update_review(
+                        review.id,
+                        {field: value},
+                    )
+
+        self.assertIs(review.user, reviewer)
+        self.assertIs(review.place, place)
+
     def test_facade_validates_review_relationships_in_memory(self):
         facade = HBnBFacade()
 

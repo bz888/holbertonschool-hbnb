@@ -283,36 +283,11 @@ class HBnBFacade:
         if review is None:
             raise ReviewNotFound(review_id)
 
-        if "place_id" in data:
-            place_id = data.pop("place_id")
-            place = self.place_repo.get(place_id)
-            if place is None or not place.is_active:
-                raise PlaceNotFound(place_id)
-        else:
-            place = review.place
-
-        if "user_id" in data:
-            user_id = data.pop("user_id")
-            user = self.user_repo.get(user_id)
-            if user is None or not user.is_active:
-                raise UserNotFound(user_id)
-        else:
-            user = review.user
-
-        if user.id == place.owner.id:
-            raise OwnerCannotReviewOwnPlace()
-
-        if place is not review.place:
-            if review in review.place.reviews:
-                review.place.reviews.remove(review)
-            place.add_review(review)
-            data["place"] = place
-
-        if user is not review.user:
-            if review in review.user.reviews:
-                review.user.reviews.remove(review)
-            user.add_review(review)
-            data["user"] = user
+        unsupported_fields = set(data) - {"text", "rating"}
+        if unsupported_fields:
+            raise ValueError(
+                "Only review text and rating can be updated"
+            )
 
         updated_review = self.review_repo.update(review_id, data)
         if updated_review is None:

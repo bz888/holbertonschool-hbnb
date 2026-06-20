@@ -218,6 +218,138 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         )
         self.assertIsNone(facade.user_repo.get(hard_user_id))
 
+    def test_review_update_rejects_user_and_place_changes(self):
+        owner = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Owner",
+                "last_name": "User",
+                "email": "owner@example.com",
+            },
+        ).get_json()
+        reviewer = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Review",
+                "last_name": "Author",
+                "email": "reviewer@example.com",
+            },
+        ).get_json()
+        place = self.client.post(
+            "/api/v1/places/",
+            json={
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100,
+                "latitude": 0,
+                "longitude": 0,
+                "owner_id": owner["id"],
+            },
+        ).get_json()
+        review = self.client.post(
+            "/api/v1/reviews/",
+            json={
+                "text": "Great stay",
+                "rating": 5,
+                "user_id": reviewer["id"],
+                "place_id": place["id"],
+            },
+        ).get_json()
+
+        for payload in (
+            {"user_id": owner["id"]},
+            {"place_id": "another-place"},
+        ):
+            with self.subTest(payload=payload):
+                response = self.client.put(
+                    f"/api/v1/reviews/{review['id']}",
+                    json=payload,
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    response.get_json(),
+                    {
+                        "error": (
+                            "Only review text and rating "
+                            "can be updated"
+                        )
+                    },
+                )
+
+    def test_place_details_include_nested_relationships(self):
+        owner = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Owner",
+                "last_name": "User",
+                "email": "owner@example.com",
+            },
+        ).get_json()
+        reviewer = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Review",
+                "last_name": "Author",
+                "email": "reviewer@example.com",
+            },
+        ).get_json()
+        amenity = self.client.post(
+            "/api/v1/amenities/",
+            json={"name": "Wi-Fi"},
+        ).get_json()
+        place = self.client.post(
+            "/api/v1/places/",
+            json={
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100,
+                "latitude": 0,
+                "longitude": 0,
+                "owner_id": owner["id"],
+                "amenity_ids": [amenity["id"]],
+            },
+        ).get_json()
+        review = self.client.post(
+            "/api/v1/reviews/",
+            json={
+                "text": "Great stay",
+                "rating": 5,
+                "user_id": reviewer["id"],
+                "place_id": place["id"],
+            },
+        ).get_json()
+
+        response = self.client.get(
+            f"/api/v1/places/{place['id']}"
+        )
+        place_data = response.get_json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            place_data["owner"],
+            {
+                "id": owner["id"],
+                "first_name": "Owner",
+                "last_name": "User",
+                "email": "owner@example.com",
+            },
+        )
+        self.assertEqual(
+            place_data["amenities"],
+            [{"id": amenity["id"], "name": "Wi-Fi"}],
+        )
+        self.assertEqual(
+            place_data["reviews"],
+            [
+                {
+                    "id": review["id"],
+                    "text": "Great stay",
+                    "rating": 5,
+                    "user_id": reviewer["id"],
+                }
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
