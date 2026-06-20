@@ -1,4 +1,7 @@
 from .base_model import BaseModel
+import re
+
+EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
 
 
 class User(BaseModel):
@@ -6,6 +9,16 @@ class User(BaseModel):
 
     def __init__(self, first_name, last_name, email, is_admin=False):
         super().__init__()
+
+        if not first_name or not first_name.strip():
+            raise ValueError("first_name cannot be empty")
+        if not last_name or not last_name.strip():
+            raise ValueError("last_name cannot be empty")
+        if not email or not email.strip():
+            raise ValueError("email cannot be empty")
+        if not re.match(EMAIL_REGEX, email):
+            raise ValueError("invalid email")
+
         self.first_name = first_name
         self.last_name = last_name
         self.email = email

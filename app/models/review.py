@@ -6,6 +6,10 @@ class Review(BaseModel):
 
     def __init__(self, text, rating, place, user):
         super().__init__()
+
+        if not text or not text.strip():
+            raise ValueError("text cannot be empty")
+
         self.text = text
         self.rating = rating
         self.place = place
