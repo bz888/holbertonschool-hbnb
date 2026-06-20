@@ -120,9 +120,7 @@ class HBnBFacade:
 
         amenity = self.amenity_repo.get(amenity_id)
         if amenity is None:
-            amenity = Amenity(name=name.strip())
-            amenity.id = amenity_id
-            self.amenity_repo.add(amenity)
+            raise AmenityNotFound(amenity_id)
 
         updated_amenity = self.amenity_repo.update(
             amenity_id,

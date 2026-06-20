@@ -40,8 +40,9 @@ class AmenityResource(Resource):
     @api.expect(amenity_update_model, validate=True)
     @api.response(200, 'Amenity successfully updated')
     @api.response(400, 'Invalid input data')
+    @api.response(404, 'Amenity not found')
     def put(self, amenity_id):
-        """Update an amenity, adding it if it does not exist"""
+        """Update an existing amenity"""
         amenity = facade.update_amenity(amenity_id, api.payload)
         return amenity.to_dict(), 200
 

@@ -61,16 +61,14 @@ class TestAmenity(unittest.TestCase):
         with self.assertRaises(ValueError):
             facade.create_amenity({"name": "  "})
 
-    def test_update_adds_amenity_when_it_does_not_exist(self):
+    def test_update_raises_when_amenity_does_not_exist(self):
         facade = HBnBFacade()
 
-        amenity = facade.update_amenity(
-            "new-amenity-id",
-            {"name": "Pool"},
-        )
-
-        self.assertEqual(amenity.id, "new-amenity-id")
-        self.assertIs(facade.get_amenity("new-amenity-id"), amenity)
+        with self.assertRaises(AmenityNotFound):
+            facade.update_amenity(
+                "missing-id",
+                {"name": "Pool"},
+            )
 
     def test_facade_creates_and_updates_amenity(self):
         facade = HBnBFacade()
