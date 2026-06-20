@@ -37,7 +37,7 @@ class ReviewList(Resource):
         """List all reviews"""
         return facade.get_all_reviews(), 200
 
-    @api.marshal_with(review_response_model, code=201)
+    @api.marshal_with(review_response_model)
     @api.expect(review_model, validate=True)
     @api.response(201, 'Review successfully created')
     @api.response(400, 'Invalid input data')

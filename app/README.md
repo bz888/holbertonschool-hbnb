@@ -27,4 +27,10 @@ DELETE /api/v1/users/<user_id>/soft-delete
 DELETE /api/v1/users/<user_id>
 ```
 
+## Hard Deletion and Relationships
+
+Hard deletion removes an object from its repository but does not automatically remove every in-memory reference to it. Deleting a user can therefore leave existing places and reviews referencing that user. Likewise, deleting an amenity can leave existing places referencing the deleted amenity.
+
+Soft deletion is preferred for related entities because it preserves relationship integrity. A future persistence layer should handle hard deletion with cascading cleanup, restricted deletion, or anonymization.
+
 `POST /api/v1/reviews/` is included for task compliance, although the place-based POST route represents the relationship more clearly.
