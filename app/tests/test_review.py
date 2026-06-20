@@ -165,7 +165,7 @@ class TestReview(unittest.TestCase):
             facade=HBnBFacade()
         )
 
-        facade.delete_user(reviewer.id)
+        facade.soft_delete_user(reviewer.id)
 
         self.assertFalse(reviewer.is_active)
         self.assertTrue(place.is_active)
@@ -195,7 +195,7 @@ class TestReview(unittest.TestCase):
             facade=HBnBFacade()
         )
 
-        facade.delete_user(owner.id)
+        facade.soft_delete_user(owner.id)
 
         self.assertFalse(owner.is_active)
         self.assertFalse(place.is_active)

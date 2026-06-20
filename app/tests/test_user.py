@@ -146,7 +146,25 @@ class TestUser(unittest.TestCase):
                 }
             )
 
-    def test_delete_user_soft_deletes_user(self):
+    def test_soft_delete_user_deactivates_user(self):
+        facade = HBnBFacade()
+        user = facade.create_user(
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+            }
+        )
+
+        deleted_user = facade.soft_delete_user(user.id)
+
+        self.assertIs(deleted_user, user)
+        self.assertFalse(user.is_active)
+        self.assertNotIn(user, facade.get_all_users())
+        with self.assertRaises(UserNotFound):
+            facade.get_user(user.id)
+
+    def test_delete_user_hard_deletes_user(self):
         facade = HBnBFacade()
         user = facade.create_user(
             {
@@ -159,8 +177,7 @@ class TestUser(unittest.TestCase):
         deleted_user = facade.delete_user(user.id)
 
         self.assertIs(deleted_user, user)
-        self.assertFalse(user.is_active)
-        self.assertNotIn(user, facade.get_all_users())
+        self.assertIsNone(facade.user_repo.get(user.id))
         with self.assertRaises(UserNotFound):
             facade.get_user(user.id)
 

@@ -135,7 +135,15 @@
           }
         },
         {
-          "name": "Delete User (Run Last)",
+          "name": "Soft Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/users/{{user_id}}/soft-delete"
+          }
+        },
+        {
+          "name": "Hard Delete User (Run Last)",
           "request": {
             "method": "DELETE",
             "header": [],

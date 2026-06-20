@@ -177,6 +177,47 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.assertIn("created_at", user.to_dict())
         self.assertIn("updated_at", user.to_dict())
 
+    def test_user_soft_and_hard_delete_routes(self):
+        soft_user_response = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Soft",
+                "last_name": "Delete",
+                "email": "soft@example.com",
+            },
+        )
+        soft_user_id = soft_user_response.get_json()["id"]
+
+        soft_delete_response = self.client.delete(
+            f"/api/v1/users/{soft_user_id}/soft-delete"
+        )
+
+        self.assertEqual(soft_delete_response.status_code, 200)
+        self.assertFalse(
+            facade.user_repo.get(soft_user_id).is_active
+        )
+
+        hard_user_response = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Hard",
+                "last_name": "Delete",
+                "email": "hard@example.com",
+            },
+        )
+        hard_user_id = hard_user_response.get_json()["id"]
+
+        hard_delete_response = self.client.delete(
+            f"/api/v1/users/{hard_user_id}"
+        )
+
+        self.assertEqual(hard_delete_response.status_code, 200)
+        self.assertEqual(
+            hard_delete_response.get_json(),
+            {"message": "User permanently deleted"},
+        )
+        self.assertIsNone(facade.user_repo.get(hard_user_id))
+
 
 if __name__ == "__main__":
     unittest.main()

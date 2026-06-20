@@ -78,7 +78,7 @@ class HBnBFacade:
 
         return updated_user
 
-    def delete_user(self, user_id):
+    def soft_delete_user(self, user_id):
         """Deactivate a user and their places while preserving reviews."""
         user = self.user_repo.get(user_id)
         if user is None or not user.is_active:
@@ -94,6 +94,16 @@ class HBnBFacade:
             place.is_active = False
             place.save()
 
+        return user
+
+    def delete_user(self, user_id):
+        """Permanently delete a user from the repository."""
+        user = self.user_repo.delete(user_id)
+        if user is None:
+            raise UserNotFound(user_id)
+
+        # TODO: Replace hard deletion with soft deletion or anonymization
+        # where reviews and places must retain a valid user reference.
         return user
 
     def create_amenity(self, amenity_data):

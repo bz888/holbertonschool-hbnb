@@ -67,7 +67,7 @@ class UserList(Resource):
         """List all users."""
         return facade.get_all_users(), 200
 
-    @api.marshal_with(user_response_model, code=201)
+    @api.marshal_with(user_response_model)
     @api.expect(user_model, validate=True)
     @api.response(201, "User successfully created")
     @api.response(400, "Invalid input data")
@@ -101,12 +101,24 @@ class UserResource(Resource):
         user = facade.update_user(user_id, api.payload)
         return user, 200
 
-    @api.response(200, "User successfully deleted")
+    @api.response(200, "User permanently deleted")
     @api.response(404, "User not found")
     def delete(self, user_id):
-        """Delete user by ID."""
+        """Permanently delete user by ID."""
         facade.delete_user(user_id)
-        return {"message": "User deleted successfully"}, 200
+        return {"message": "User permanently deleted"}, 200
+
+
+@api.route("/<user_id>/soft-delete")
+class UserSoftDeleteResource(Resource):
+    """Handle soft deletion of a user."""
+
+    @api.response(200, "User successfully deactivated")
+    @api.response(404, "User not found")
+    def delete(self, user_id):
+        """Deactivate a user and their places."""
+        facade.soft_delete_user(user_id)
+        return {"message": "User deactivated successfully"}, 200
 
 
 @api.route("/<user_id>/reviews")
