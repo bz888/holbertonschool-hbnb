@@ -8,6 +8,8 @@ from models.place import Place
 from models.review import Review
 from models.user import User
 from services.facade import HBnBFacade
+from utils.errors.place import PlaceNotFound
+from utils.errors.review import OwnerCannotReviewOwnPlace
 
 
 class TestReview(unittest.TestCase):
@@ -26,7 +28,7 @@ class TestReview(unittest.TestCase):
     def test_facade_validates_review_relationships_in_memory(self):
         facade = HBnBFacade()
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(PlaceNotFound):
             facade.create_review(
                 {
                     "text": "Great stay",
@@ -38,7 +40,46 @@ class TestReview(unittest.TestCase):
 
     def test_facade_links_review_to_place_and_user(self):
         facade = HBnBFacade()
-        user = facade.create_user(
+        owner = facade.create_user(
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+            }
+        )
+        reviewer = facade.create_user(
+            {
+                "first_name": "Grace",
+                "last_name": "Hopper",
+                "email": "grace@example.com",
+            }
+        )
+        place = facade.create_place(
+            {
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100.0,
+                "latitude": 0.0,
+                "longitude": 0.0,
+                "owner_id": owner.id,
+            }
+        )
+
+        review = facade.create_review(
+            {
+                "text": "Great stay",
+                "rating": 5,
+                "place_id": place.id,
+                "user_id": reviewer.id,
+            }
+        )
+
+        self.assertIn(review, place.reviews)
+        self.assertIn(review, reviewer.reviews)
+
+    def test_owner_cannot_review_own_place(self):
+        facade = HBnBFacade()
+        owner = facade.create_user(
             {
                 "first_name": "Ada",
                 "last_name": "Lovelace",
@@ -52,21 +93,19 @@ class TestReview(unittest.TestCase):
                 "price": 100.0,
                 "latitude": 0.0,
                 "longitude": 0.0,
-                "owner_id": user.id,
+                "owner_id": owner.id,
             }
         )
 
-        review = facade.create_review(
-            {
-                "text": "Great stay",
-                "rating": 5,
-                "place_id": place.id,
-                "user_id": user.id,
-            }
-        )
-
-        self.assertIn(review, place.reviews)
-        self.assertIn(review, user.reviews)
+        with self.assertRaises(OwnerCannotReviewOwnPlace):
+            facade.create_review(
+                {
+                    "text": "Great stay",
+                    "rating": 5,
+                    "place_id": place.id,
+                    "user_id": owner.id,
+                }
+            )
 
 
 if __name__ == "__main__":

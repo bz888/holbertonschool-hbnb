@@ -1,6 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from services import facade
 from utils.errors.place import PlaceNotFound
+from utils.errors.review import OwnerCannotReviewOwnPlace
 
 api = Namespace('places', description='Place operations')
 
@@ -112,5 +113,7 @@ class PlaceReviewList(Resource):
             return review.to_dict(), 201
         except PlaceNotFound:
             return {'error': 'Place not found'}, 404
+        except OwnerCannotReviewOwnPlace as exc:
+            return {'error': str(exc)}, 400
         except ValueError as exc:
             return {'error': str(exc)}, 400

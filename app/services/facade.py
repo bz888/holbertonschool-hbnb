@@ -1,5 +1,6 @@
 from utils.errors.amenity import AmenityNotFound
 from utils.errors.place import PlaceNotFound
+from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
 from utils.errors.user import EmailAlreadyRegistered, UserNotFound
 from models.amenity import Amenity
 from models.place import Place
@@ -120,16 +121,14 @@ class HBnBFacade:
         data = place_data.copy()
         owner = self.user_repo.get(data["owner_id"])
         if owner is None:
-            raise ValueError("owner does not exist")
+            raise UserNotFound(data["owner_id"])
 
         amenity_ids = data.pop("amenity_ids", [])
         amenities = []
         for amenity_id in amenity_ids:
             amenity = self.amenity_repo.get(amenity_id)
             if amenity is None:
-                raise ValueError(
-                    f"amenity does not exist: {amenity_id}"
-                )
+                raise AmenityNotFound(amenity_id)
             amenities.append(amenity)
 
         data.pop("owner_id")
@@ -166,7 +165,7 @@ class HBnBFacade:
         if "owner_id" in data:
             owner = self.user_repo.get(data.pop("owner_id"))
             if owner is None:
-                raise ValueError("owner does not exist")
+                raise UserNotFound(data["owner_id"])
             data["owner"] = owner
 
         if "amenity_ids" in data:
@@ -174,9 +173,7 @@ class HBnBFacade:
             for amenity_id in data.pop("amenity_ids"):
                 amenity = self.amenity_repo.get(amenity_id)
                 if amenity is None:
-                    raise ValueError(
-                        f"amenity does not exist: {amenity_id}"
-                    )
+                    raise AmenityNotFound(amenity_id)
                 amenities.append(amenity)
             data["amenities"] = amenities
 
@@ -204,7 +201,10 @@ class HBnBFacade:
 
         user = self.user_repo.get(data["user_id"])
         if user is None:
-            raise ValueError("user does not exist")
+            raise UserNotFound(data["user_id"])
+
+        if user.id == place.owner.id:
+            raise OwnerCannotReviewOwnPlace()
 
         data.pop("place_id")
         data.pop("user_id")
@@ -215,7 +215,10 @@ class HBnBFacade:
         return self.review_repo.add(review)
 
     def get_review(self, review_id):
-        return self.review_repo.get(review_id)
+        review = self.review_repo.get(review_id)
+        if review is None:
+            raise ReviewNotFound(review_id)
+        return review
 
     def get_all_reviews(self):
         return self.review_repo.get_all()
@@ -232,20 +235,30 @@ class HBnBFacade:
 
     def update_review(self, review_id, review_data):
         data = review_data.copy()
+        review = self.review_repo.get(review_id)
+        if review is None:
+            raise ReviewNotFound(review_id)
 
         if "place_id" in data:
-            place = self.place_repo.get(data.pop("place_id"))
+            place_id = data.pop("place_id")
+            place = self.place_repo.get(place_id)
             if place is None:
-                raise ValueError("place does not exist")
+                raise PlaceNotFound(place_id)
             data["place"] = place
 
         if "user_id" in data:
             user = self.user_repo.get(data.pop("user_id"))
             if user is None:
-                raise ValueError("user does not exist")
+                raise UserNotFound(data["user_id"])
             data["user"] = user
 
-        return self.review_repo.update(review_id, data)
+        updated_review = self.review_repo.update(review_id, data)
+        if updated_review is None:
+            raise ReviewNotFound(review_id)
+        return updated_review
 
     def delete_review(self, review_id):
-        return self.review_repo.delete(review_id)
+        review = self.review_repo.delete(review_id)
+        if review is None:
+            raise ReviewNotFound(review_id)
+        return review

@@ -1,5 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from services import facade
+from utils.errors.place import PlaceNotFound
+from utils.errors.review import OwnerCannotReviewOwnPlace
 from utils.errors.user import EmailAlreadyRegistered, UserNotFound
 
 
@@ -37,6 +39,24 @@ user_update_model = api.model(
         "email": fields.String(
             required=False,
             description="Email of the user",
+        ),
+    },
+)
+
+review_for_user_model = api.model(
+    "UserReview",
+    {
+        "text": fields.String(
+            required=True,
+            description="Review text",
+        ),
+        "rating": fields.Integer(
+            required=True,
+            description="Rating from 1 to 5",
+        ),
+        "place_id": fields.String(
+            required=True,
+            description="ID of the place",
         ),
     },
 )
@@ -108,3 +128,25 @@ class UserResource(Resource):
             return {"message": "User deleted successfully"}, 200
         except UserNotFound:
             return {"error": "User not found"}, 404
+
+
+@api.route("/<user_id>/reviews")
+class UserReviewList(Resource):
+    """Handle review creation for a user."""
+
+    @api.expect(review_for_user_model, validate=True)
+    @api.response(201, "Review successfully created")
+    @api.response(400, "Invalid input data")
+    @api.response(404, "User or place not found")
+    def post(self, user_id):
+        """Create a review written by a user."""
+        review_data = api.payload.copy()
+        review_data["user_id"] = user_id
+
+        try:
+            review = facade.create_review(review_data)
+            return review.to_dict(), 201
+        except UserNotFound:
+            return {"error": "User not found"}, 404
+        except ValueError as exc:
+            return {"error": str(exc)}, 400
