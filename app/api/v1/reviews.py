@@ -24,6 +24,16 @@ class ReviewList(Resource):
         """List all reviews"""
         return [review.to_dict() for review in facade.get_all_reviews()], 200
 
+    @api.expect(review_model, validate=True)
+    @api.response(201, 'Review successfully created')
+    @api.response(400, 'Invalid input data')
+    @api.response(404, 'User or place not found')
+    def post(self):
+        """Create a new review"""
+        review = facade.create_review(api.payload)
+        return review.to_dict(), 201
+
+
 @api.route('/<review_id>')
 class ReviewResource(Resource):
     @api.response(200, 'Review details retrieved successfully')
