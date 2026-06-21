@@ -192,6 +192,34 @@ class TestReview(unittest.TestCase):
                 }
             )
 
+        owner = facade.create_user(
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+            }
+        )
+        place = facade.create_place(
+            {
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100.0,
+                "latitude": 0.0,
+                "longitude": 0.0,
+                "owner_id": owner.id,
+            }
+        )
+
+        with self.assertRaises(UserNotFound):
+            facade.create_review(
+                {
+                    "text": "Great stay",
+                    "rating": 5,
+                    "place_id": place.id,
+                    "user_id": self.user.id,
+                }
+            )
+
     def test_facade_links_review_to_place_and_user(self):
         facade = HBnBFacade()
         owner = facade.create_user(

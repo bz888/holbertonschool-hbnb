@@ -8,6 +8,8 @@
 - #### PUT /api/v1/users/<user_id>
 - #### PUT /api/v1/amenities/<amenity_id>
 
+POST routes
+
 ```
 TODO: 
 Need to update logic on reviews and amenities, as if req.body contains ameneities, it would just update that field, req.body should just take an array of "amenity IDs" then in facade, it would hit get, if does not exist it should throw (OR add to DB).
