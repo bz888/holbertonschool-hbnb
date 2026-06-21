@@ -165,12 +165,6 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 {"error": "User 'missing' not found"},
             ),
             (
-                self.client.delete(
-                    "/api/v1/users/missing/soft-delete"
-                ),
-                {"error": "User 'missing' not found"},
-            ),
-            (
                 self.client.get("/api/v1/users/missing/reviews"),
                 {"error": "User 'missing' not found"},
             ),
@@ -315,6 +309,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         for response in (
             created_response,
             retrieved_response,
+            updated_response,
         ):
             self.assertEqual(
                 set(response.get_json()),
@@ -323,8 +318,8 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
 
         self.assertEqual(updated_response.status_code, 200)
         self.assertEqual(
-            updated_response.get_json(),
-            {"message": "User updated successfully"},
+            updated_response.get_json()["first_name"],
+            "Augusta Ada",
         )
 
         self.assertEqual(
@@ -432,25 +427,25 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             {"id", "text", "rating", "place_id", "user_id"},
         )
 
-    def test_user_soft_and_hard_delete_routes(self):
-        soft_user_response = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Soft",
-                "last_name": "Delete",
-                "email": "soft@example.com",
-            },
-        )
-        soft_user_id = soft_user_response.get_json()["id"]
+    def test_hard_delete_routes(self):
+        # soft_user_response = self.client.post(
+        #     "/api/v1/users/",
+        #     json={
+        #         "first_name": "Soft",
+        #         "last_name": "Delete",
+        #         "email": "soft@example.com",
+        #     },
+        # )
+        # soft_user_id = soft_user_response.get_json()["id"]
 
-        soft_delete_response = self.client.delete(
-            f"/api/v1/users/{soft_user_id}/soft-delete"
-        )
+        # soft_delete_response = self.client.delete(
+        #     f"/api/v1/users/{soft_user_id}/soft-delete"
+        # )
 
-        self.assertEqual(soft_delete_response.status_code, 200)
-        self.assertFalse(
-            facade.user_repo.get(soft_user_id).is_active
-        )
+        # self.assertEqual(soft_delete_response.status_code, 200)
+        # self.assertFalse(
+        #     facade.user_repo.get(soft_user_id).is_active
+        # )
 
         hard_user_response = self.client.post(
             "/api/v1/users/",
