@@ -97,7 +97,13 @@ class TestAmenity(unittest.TestCase):
         facade = HBnBFacade()
         amenity = facade.create_amenity({"name": "Wi-Fi"})
 
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(
+            ValueError,
+            (
+                "Invalid fields for amenity: is_active\\. "
+                "Allowed fields: name"
+            ),
+        ):
             facade.update_amenity(
                 amenity.id,
                 {
@@ -105,6 +111,8 @@ class TestAmenity(unittest.TestCase):
                     "is_active": False,
                 },
             )
+
+        self.assertEqual(amenity.name, "Wi-Fi")
 
 
 if __name__ == "__main__":

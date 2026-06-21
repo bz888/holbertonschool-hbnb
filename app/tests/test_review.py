@@ -126,7 +126,13 @@ class TestReview(unittest.TestCase):
             ("is_active", False),
         ):
             with self.subTest(field=field):
-                with self.assertRaises(ValueError):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    (
+                        f"Invalid fields for review: {field}\\. "
+                        "Allowed fields: rating, text"
+                    ),
+                ):
                     facade.update_review(
                         review.id,
                         {field: value},
@@ -238,8 +244,10 @@ class TestReview(unittest.TestCase):
         self.assertIn(review, facade.get_all_reviews())
         self.assertIn(review, place.reviews)
         self.assertEqual(review.to_dict()["user_id"], reviewer.id)
-        with self.assertRaises(UserNotFound):
-            facade.get_reviews_by_user(reviewer.id)
+        self.assertEqual(
+            facade.get_reviews_by_user(reviewer.id),
+            [review],
+        )
 
     def test_deleting_place_preserves_review(self):
         facade, _, _, place, review = self._create_review(
@@ -248,7 +256,7 @@ class TestReview(unittest.TestCase):
 
         facade.delete_place(place.id)
 
-        self.assertFalse(place.is_active)
+        self.assertIsNone(facade.place_repo.get(place.id))
         self.assertIs(facade.get_review(review.id), review)
         self.assertIn(review, facade.get_all_reviews())
         self.assertEqual(review.to_dict()["place_id"], place.id)

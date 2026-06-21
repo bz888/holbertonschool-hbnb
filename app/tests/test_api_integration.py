@@ -385,11 +385,143 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                     response.get_json(),
                     {
                         "error": (
-                            "Only review text and rating "
-                            "can be updated"
+                            "Invalid fields for review: "
+                            f"{next(iter(payload))}. "
+                            "Allowed fields: rating, text"
                         )
                     },
                 )
+
+    def test_updates_reject_unsupported_fields(self):
+        owner = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Owner",
+                "last_name": "User",
+                "email": "owner@example.com",
+            },
+        ).get_json()
+        replacement_owner = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Replacement",
+                "last_name": "Owner",
+                "email": "replacement@example.com",
+            },
+        ).get_json()
+        amenity = self.client.post(
+            "/api/v1/amenities/",
+            json={"name": "Wi-Fi"},
+        ).get_json()
+        place = self.client.post(
+            "/api/v1/places/",
+            json={
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100,
+                "latitude": 0,
+                "longitude": 0,
+                "owner_id": owner["id"],
+            },
+        ).get_json()
+
+        checks = (
+            (
+                self.client.put(
+                    f"/api/v1/users/{owner['id']}",
+                    json={"is_admin": True},
+                ),
+                {
+                    "error": (
+                        "Invalid fields for user: is_admin. "
+                        "Allowed fields: email, first_name, last_name"
+                    )
+                },
+            ),
+            (
+                self.client.put(
+                    f"/api/v1/amenities/{amenity['id']}",
+                    json={
+                        "name": "Parking",
+                        "is_active": False,
+                    },
+                ),
+                {
+                    "error": (
+                        "Invalid fields for amenity: is_active. "
+                        "Allowed fields: name"
+                    )
+                },
+            ),
+            (
+                self.client.put(
+                    f"/api/v1/places/{place['id']}",
+                    json={"owner_id": replacement_owner["id"]},
+                ),
+                {
+                    "error": (
+                        "Invalid fields for place: owner_id. "
+                        "Allowed fields: amenity_ids, description, "
+                        "latitude, longitude, price, title"
+                    )
+                },
+            ),
+        )
+
+        for response, expected_body in checks:
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.get_json(), expected_body)
+
+        self.assertFalse(facade.get_user(owner["id"]).is_admin)
+        self.assertEqual(
+            facade.get_amenity(amenity["id"]).name,
+            "Wi-Fi",
+        )
+        self.assertEqual(
+            facade.get_place(place["id"]).owner.id,
+            owner["id"],
+        )
+
+    def test_place_delete_route_hard_deletes_place(self):
+        owner = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Owner",
+                "last_name": "User",
+                "email": "owner@example.com",
+            },
+        ).get_json()
+        place = self.client.post(
+            "/api/v1/places/",
+            json={
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100,
+                "latitude": 0,
+                "longitude": 0,
+                "owner_id": owner["id"],
+            },
+        ).get_json()
+
+        response = self.client.delete(
+            f"/api/v1/places/{place['id']}"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json(),
+            {"message": "Place deleted successfully"},
+        )
+        self.assertIsNone(facade.place_repo.get(place["id"]))
+
+        missing_response = self.client.get(
+            f"/api/v1/places/{place['id']}"
+        )
+        self.assertEqual(missing_response.status_code, 404)
+        self.assertEqual(
+            missing_response.get_json(),
+            {"error": f"Place '{place['id']}' not found"},
+        )
 
     def test_place_details_include_nested_relationships(self):
         owner = self.client.post(

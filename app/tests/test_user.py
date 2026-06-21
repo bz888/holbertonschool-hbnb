@@ -102,11 +102,19 @@ class TestUser(unittest.TestCase):
             }
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(
+            ValueError,
+            (
+                "Invalid fields for user: is_admin\\. "
+                "Allowed fields: email, first_name, last_name"
+            ),
+        ):
             facade.update_user(
                 user.id,
                 {"is_admin": True},
             )
+
+        self.assertFalse(user.is_admin)
 
     def test_add_place(self):
         user = User("Ada", "Lovelace", "ada@example.com")
@@ -162,7 +170,7 @@ class TestUser(unittest.TestCase):
                 }
             )
 
-    def test_soft_delete_user_deactivates_user(self):
+    def test_soft_delete_user_sets_inactive_flag(self):
         facade = HBnBFacade()
         user = facade.create_user(
             {
@@ -176,9 +184,8 @@ class TestUser(unittest.TestCase):
 
         self.assertIs(deleted_user, user)
         self.assertFalse(user.is_active)
-        self.assertNotIn(user, facade.get_all_users())
-        with self.assertRaises(UserNotFound):
-            facade.get_user(user.id)
+        self.assertIn(user, facade.get_all_users())
+        self.assertIs(facade.get_user(user.id), user)
 
     def test_delete_user_hard_deletes_user(self):
         facade = HBnBFacade()

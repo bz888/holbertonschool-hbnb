@@ -201,13 +201,23 @@ class TestPlace(unittest.TestCase):
             }
         )
 
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(
+            ValueError,
+            (
+                "Invalid fields for place: owner_id\\. Allowed fields: "
+                "amenity_ids, description, latitude, longitude, price, title"
+            ),
+        ):
             facade.update_place(
                 place.id,
                 {"owner_id": replacement_owner.id},
             )
 
-    def test_delete_place_soft_deletes_place(self):
+        self.assertIs(place.owner, owner)
+        self.assertIn(place, owner.places)
+        self.assertNotIn(place, replacement_owner.places)
+
+    def test_delete_place_hard_deletes_place(self):
         facade = HBnBFacade()
         owner = facade.create_user(
             {
@@ -230,10 +240,12 @@ class TestPlace(unittest.TestCase):
         deleted_place = facade.delete_place(place.id)
 
         self.assertIs(deleted_place, place)
-        self.assertFalse(place.is_active)
+        self.assertIsNone(facade.place_repo.get(place.id))
         self.assertNotIn(place, facade.get_all_places())
         with self.assertRaises(PlaceNotFound):
             facade.get_place(place.id)
+        with self.assertRaises(PlaceNotFound):
+            facade.delete_place(place.id)
 
 
 if __name__ == "__main__":
