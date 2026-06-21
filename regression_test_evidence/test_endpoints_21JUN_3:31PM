@@ -1,0 +1,498 @@
+### POST /api/v1/users/
+
+```
+req:
+{
+  "first_name": "Ada",
+  "last_name": "Lovelace",
+  "email": "ada.{{$timestamp}}@example.com"
+}
+```
+
+```
+resp:
+201 Created
+{
+    "id": "2816c3ad-e602-48ea-ab6b-48ebb01fa05f",
+    "first_name": "Ada",
+    "last_name": "Lovelace",
+    "email": "ada.1782014950@example.com"
+}
+
+400 Bad Request
+{
+    "error": "Email 'ada.1782014950@example.com' is already registered"
+}
+```
+
+### GET /api/v1/users/<user_id>
+
+```
+resp:
+200 OK
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "first_name": "John",
+  "last_name": "Doe",
+  "email": "john.doe@x.com"
+}
+
+404 Not Found
+{
+    "error": "User '123' not found"
+}
+```
+
+### GET /api/v1/users/
+
+```
+resp:
+200 OK
+[
+    {
+        "id": "2816c3ad-e602-48ea-ab6b-48ebb01fa05f",
+        "first_name": "Ada",
+        "last_name": "Lovelace",
+        "email": "ada.1782014950@example.com"
+    },
+    {
+        "id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+        "first_name": "Ada",
+        "last_name": "Lovelace",
+        "email": "ada.1782015166@example.com"
+    }
+]
+```
+
+### PUT /api/v1/users/<user_id>
+
+```
+req:
+{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "email": "jane.doe@example.com"
+}
+```
+
+```
+resp:
+200 OK
+{
+    "id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "email": "jane.doe@example.com"
+}
+
+404 Not Found
+{
+    "error": "User '123' not found"
+}
+
+Missing Bad Request for non accepted fields
+
+400 Bad Request
+{
+    "error": "Email must be a valid email address"
+}
+
+existing email bad request 400
+
+{
+    "error": "Email 'ada.1782014950@example.com' is already registered"
+}
+```
+
+### POST /api/v1/amenities/
+
+```
+201 Created
+
+{
+    "id": "a522734b-3832-48a3-8147-fb3c17fa95ab",
+    "name": "Wi-Fi"
+}
+
+400 Bad Request
+{
+    "errors": {
+        "name": "'name' is a required property"
+    },
+    "message": "Input payload validation failed"
+}
+```
+
+### GET /api/v1/amenities/
+
+```
+200 OK
+
+[
+    {
+        "id": "a522734b-3832-48a3-8147-fb3c17fa95ab",
+        "name": "Wi-Fi"
+    }
+]
+```
+
+### GET /api/v1/amenities/<amenity_id>
+
+```
+200 OK
+{
+    "id": "a522734b-3832-48a3-8147-fb3c17fa95ab",
+    "name": "Wi-Fi"
+}
+
+404 Not Found
+{
+	"error": "Amenity '123' not found"
+}
+```
+
+### PUT /api/v1/amenities/<amenity_id>
+
+```
+200 OK
+
+{
+    "message": "Amenity updated successfully"
+}
+
+400 Bad Request
+{
+    "error": "Amenity name must be a non-empty string"
+}
+
+404 Not Found
+{
+	"error": "Amenity '123' not found"
+}
+```
+
+### POST /api/v1/places/
+
+```
+Note: Ensure that related data such as owner details and amenities are properly handled and returned with the Place data.
+
+Hence, the response includes the owner information and the list of amenities associated with the place.
+```
+```
+201 Created
+
+{
+    "id": "918bc595-590b-4312-9fed-5d4fce226697",
+    "title": "Melbourne Apartment",
+    "description": "Central apartment",
+    "price": 150.0,
+    "latitude": -37.8136,
+    "longitude": 144.9631,
+    "owner_id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+    "owner": {
+        "id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+        "first_name": "Augusta Ada",
+        "last_name": "Doe",
+        "email": "jane.doe@example.com"
+    },
+    "amenities": [
+        {
+            "id": "a522734b-3832-48a3-8147-fb3c17fa95ab",
+            "name": "High-speed Wi-Fi"
+        }
+    ],
+    "reviews": []
+}
+
+400 Bad Request
+{
+    "errors": {
+        "title": "'title' is a required property"
+    },
+    "message": "Input payload validation failed"
+}
+
+404 Not Found
+{
+	"error": "User '123' not found"
+}
+```
+### GET /api/v1/places/
+
+```
+200 OK
+[
+    {
+        "id": "918bc595-590b-4312-9fed-5d4fce226697",
+        "title": "Melbourne Apartment",
+        "description": "Central apartment",
+        "price": 150.0,
+        "latitude": -37.8136,
+        "longitude": 144.9631,
+        "owner_id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+        "owner": {
+            "id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+            "first_name": "Augusta Ada",
+            "last_name": "Doe",
+            "email": "jane.doe@example.com"
+        },
+        "amenities": [
+            {
+                "id": "a522734b-3832-48a3-8147-fb3c17fa95ab",
+                "name": "High-speed Wi-Fi"
+            }
+        ],
+        "reviews": []
+    },
+    {
+        "id": "6ad615d6-fba3-4497-9a26-1dc050d77239",
+        "title": "Melbourne Apartment",
+        "description": "Central apartment",
+        "price": 150.0,
+        "latitude": -37.8136,
+        "longitude": 144.9631,
+        "owner_id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+        "owner": {
+            "id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+            "first_name": "Augusta Ada",
+            "last_name": "Doe",
+            "email": "jane.doe@example.com"
+        },
+        "amenities": [],
+        "reviews": []
+    }
+]
+```
+
+### GET /api/v1/places/<place_id>
+
+```
+200 OK (As expected response per HBNB docs)
+{
+    "id": "918bc595-590b-4312-9fed-5d4fce226697",
+    "title": "Melbourne Apartment",
+    "description": "Central apartment",
+    "price": 150.0,
+    "latitude": -37.8136,
+    "longitude": 144.9631,
+    "owner_id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+    "owner": {
+        "id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+        "first_name": "Augusta Ada",
+        "last_name": "Doe",
+        "email": "jane.doe@example.com"
+    },
+    "amenities": [
+        {
+            "id": "a522734b-3832-48a3-8147-fb3c17fa95ab",
+            "name": "High-speed Wi-Fi"
+        }
+    ],
+    "reviews": []
+}
+
+404 Not Found
+{
+    "error": "Place '918bc595-590b-4312-9fed-5d4fce2266971' not found"
+}
+```
+
+### PUT /api/v1/places/<place_id>
+
+```
+TODO: 
+Need to update logic on reviews and amenities, as if req.body contains ameneities, it would just update that field, req.body should just take an array of "amenity IDs" then in facade, it would hit get, if does not exist it should throw (OR add to DB).
+need validation against exisitng DB content
+
+this is the same for reviews.
+
+should not be able to update owner ID
+
+should resp with msg and ok not updated content.
+
+add validators on non accepted keys
+```
+
+```
+200 OK
+
+{
+    "id": "918bc595-590b-4312-9fed-5d4fce226697",
+    "title": "Updated Melbourne Apartment",
+    "description": "hello wolrd",
+    "price": 175.0,
+    "latitude": -37.8136,
+    "longitude": 144.9631,
+    "owner_id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+    "owner": {
+        "id": "2521225b-5d0d-43e9-a54c-16e63be5491b",
+        "first_name": "Augusta Ada",
+        "last_name": "Doe",
+        "email": "jane.doe@example.com"
+    },
+    "amenities": [
+        {
+            "id": "a522734b-3832-48a3-8147-fb3c17fa95ab",
+            "name": "High-speed Wi-Fi"
+        }
+    ],
+    "reviews": []
+}
+```
+
+### POST /api/v1/places/<place_id>/reviews
+
+```
+400 Bad Request
+
+{
+    "error": "Owners cannot review their own place"
+}
+
+200 OK 
+req:
+{
+  "text": "Great stay",
+  "rating": 5,
+  "user_id": "2521225b-5d0d-43e9-a54c-16e63be5491b"
+}
+
+resp:
+{
+    "id": "b8b1ed4f-3262-44cb-bf57-576519e40521",
+    "text": "Great stay",
+    "rating": 5,
+    "place_id": "918bc595-590b-4312-9fed-5d4fce226697",
+    "user_id": "2521225b-5d0d-43e9-a54c-16e63be5491b"
+}
+```
+
+### POST /api/v1/reviews/
+```
+200 OK
+{
+    "id": "d44422c5-d1f9-4b16-8bd1-420a9b9f9b65",
+    "text": "Excellent location",
+    "rating": 5,
+    "place_id": "918bc595-590b-4312-9fed-5d4fce226697",
+    "user_id": "2521225b-5d0d-43e9-a54c-16e63be5491b"
+}
+
+400 Bad Request (Validators working)
+req:
+{
+  "text": "Excellent location",
+  "rating": "1",
+  "user_id": "{{reviewer_id}}",
+  "place_id": "{{place_id}}"
+}
+
+resp:
+{
+    "errors": {
+        "rating": "'1' is not of type 'integer'"
+    },
+    "message": "Input payload validation failed"
+}
+
+{
+    "errors": {
+        "user_id": "'user_id' is a required property"
+    },
+    "message": "Input payload validation failed"
+}
+```
+
+### GET /api/v1/reviews/
+```
+200 OK
+[
+    {
+        "id": "b8b1ed4f-3262-44cb-bf57-576519e40521",
+        "text": "Great stay",
+        "rating": 5,
+        "place_id": "918bc595-590b-4312-9fed-5d4fce226697",
+        "user_id": "2521225b-5d0d-43e9-a54c-16e63be5491b"
+    },
+    {
+        "id": "d44422c5-d1f9-4b16-8bd1-420a9b9f9b65",
+        "text": "Excellent location",
+        "rating": 5,
+        "place_id": "918bc595-590b-4312-9fed-5d4fce226697",
+        "user_id": "2521225b-5d0d-43e9-a54c-16e63be5491b"
+    }
+]
+```
+
+### GET /api/v1/reviews/<review_id>
+
+```
+200 OK
+{
+    "id": "d44422c5-d1f9-4b16-8bd1-420a9b9f9b65",
+    "text": "Excellent location",
+    "rating": 5,
+    "place_id": "918bc595-590b-4312-9fed-5d4fce226697",
+    "user_id": "2521225b-5d0d-43e9-a54c-16e63be5491b"
+}
+
+404 Not found
+{
+    "error": "Review '1' not found"
+}
+```
+
+### PUT /api/v1/reviews/<review_id>
+
+```
+200 OK
+req:
+{
+  "text": "Updated review text",
+  "rating": 4
+}
+
+resp:
+{
+    "id": "b8b1ed4f-3262-44cb-bf57-576519e40521",
+    "text": "Updated review text",
+    "rating": 4,
+    "place_id": "918bc595-590b-4312-9fed-5d4fce226697",
+    "user_id": "2521225b-5d0d-43e9-a54c-16e63be5491b"
+}
+
+400 Bad Request
+req:
+{
+  "text": "Updated review text",
+  "rating": "1"
+}
+
+resp:
+{
+    "errors": {
+        "rating": "'1' is not of type 'integer'"
+    },
+    "message": "Input payload validation failed"
+}
+
+400 Bad Request
+req: 
+{
+  "text": "Updated review text",
+  "rating": 1,
+  "key": "value"
+}
+
+resp:
+{
+    "error": "Only review text and rating can be updated"
+}
+```
+
+### DELETE /api/v1/reviews/<review_id>
+```
+{
+    "message": "Review deleted successfully"
+}
+```

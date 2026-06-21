@@ -14,16 +14,25 @@ NOTE: this alot of boilerplate code, please go over it and make sure to understa
 
 
 TODO (Catch up with Jonathan 17 JUN)
-### owner cannot make review on their own place, this should be implemented in the service layer and tested accordingly. (This is not strictly only for this, but any other situtations also)
-
-### need to add data sctructure of resp for the purpose of documentation and clarity.
 
 ### Implement SWAGGER docs
-
-### Update APIs to ensure that payload returned is consistent (the mapping should be done via the API layer)
-
-### Consistency across code, facade layer should handle any logics, such as isExisting user or not, and the API layer should only handle the request and response, and call the facade layer accordingly.
-
 ### ensure working tests
+### FIX for updates and req.body validator
 
-### postman collection
+- #### PUT /api/v1/places/<place_id>
+- #### PUT /api/v1/users/<user_id>
+- #### PUT /api/v1/amenities/<amenity_id>
+
+```
+TODO: 
+Need to update logic on reviews and amenities, as if req.body contains ameneities, it would just update that field, req.body should just take an array of "amenity IDs" then in facade, it would hit get, if does not exist it should throw (OR add to DB).
+need validation against exisitng DB content
+
+this is the same for reviews.
+
+should not be able to update owner ID
+
+should resp with msg and ok not updated content.
+
+add validators on non accepted keys
+```
