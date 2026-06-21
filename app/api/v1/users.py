@@ -106,6 +106,7 @@ class UserResource(Resource):
         user = facade.get_user(user_id)
         return user, 200
 
+    @api.marshal_with(user_response_model)
     @api.expect(user_update_model, validate=True)
     @api.response(200, "User successfully updated")
     @api.response(400, "Invalid input data")
@@ -113,8 +114,8 @@ class UserResource(Resource):
     @api.response(400, "Email already registered")
     def put(self, user_id):
         """Update user details by ID."""
-        facade.update_user(user_id, api.payload)
-        return {"message": "User updated successfully"}, 200
+        user = facade.update_user(user_id, api.payload)
+        return user, 200
 
     @api.response(200, "User permanently deleted")
     @api.response(404, "User not found")
@@ -124,16 +125,17 @@ class UserResource(Resource):
         return {"message": "User permanently deleted"}, 200
 
 
-@api.route("/<user_id>/soft-delete")
-class UserSoftDeleteResource(Resource):
-    """Handle soft deletion of a user."""
+# future implementation for soft deletion, purpose for addressing loose review relationships
+# @api.route("/<user_id>/soft-delete")
+# class UserSoftDeleteResource(Resource):
+#     """Handle soft deletion of a user."""
 
-    @api.response(200, "User successfully deactivated")
-    @api.response(404, "User not found")
-    def delete(self, user_id):
-        """Deactivate a user and their places."""
-        facade.soft_delete_user(user_id)
-        return {"message": "User deactivated successfully"}, 200
+#     @api.response(200, "User successfully deactivated")
+#     @api.response(404, "User not found")
+#     def delete(self, user_id):
+#         """Deactivate a user and their places."""
+#         facade.soft_delete_user(user_id)
+#         return {"message": "User deactivated successfully"}, 200
 
 
 @api.route("/<user_id>/reviews")
