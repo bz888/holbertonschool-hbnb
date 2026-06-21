@@ -1,9 +1,8 @@
-currently the project is using a simpler direct attributes for the models. 
+currently the project is using a simpler direct attributes for the models.
 
-Later, consider adding property setters/getters to enforce validation inside the models, such as email format, positive prices, coordinate ranges, and review rating limits. 
+Later, consider adding property setters/getters to enforce validation inside the models, such as email format, positive prices, coordinate ranges, and review rating limits.
 
 This would make object updates safer and help prevent invalid data from entering the in-memory persistence layer.
-
 
 Test:
 all CRUD operations with in mem persistence layer, including error handling for invalid data and non-existent resources.
@@ -12,11 +11,12 @@ unit tests do not offer full coverage of the API, but they do cover the core log
 
 NOTE: this alot of boilerplate code, please go over it and make sure to understand the structure and flow of the application.
 
-
 TODO (Catch up with Jonathan 17 JUN)
 
 ### Implement SWAGGER docs
+
 ### ensure working tests
+
 ### FIX for updates and req.body validator
 
 - #### PUT /api/v1/places/<place_id>
@@ -24,7 +24,7 @@ TODO (Catch up with Jonathan 17 JUN)
 - #### PUT /api/v1/amenities/<amenity_id>
 
 ```
-TODO: 
+TODO:
 Need to update logic on reviews and amenities, as if req.body contains ameneities, it would just update that field, req.body should just take an array of "amenity IDs" then in facade, it would hit get, if does not exist it should throw (OR add to DB).
 need validation against exisitng DB content
 
