@@ -174,6 +174,39 @@ class TestPlace(unittest.TestCase):
                 }
             )
 
+    def test_facade_place_update_rejects_unsupported_fields(self):
+        facade = HBnBFacade()
+        owner = facade.create_user(
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+            }
+        )
+        replacement_owner = facade.create_user(
+            {
+                "first_name": "Grace",
+                "last_name": "Hopper",
+                "email": "grace@example.com",
+            }
+        )
+        place = facade.create_place(
+            {
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100.0,
+                "latitude": 0.0,
+                "longitude": 0.0,
+                "owner_id": owner.id,
+            }
+        )
+
+        with self.assertRaises(ValueError):
+            facade.update_place(
+                place.id,
+                {"owner_id": replacement_owner.id},
+            )
+
     def test_delete_place_soft_deletes_place(self):
         facade = HBnBFacade()
         owner = facade.create_user(

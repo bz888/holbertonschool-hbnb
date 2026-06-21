@@ -115,7 +115,7 @@ class TestReview(unittest.TestCase):
         self.assertIs(updated_review.user, reviewer)
         self.assertIs(updated_review.place, place)
 
-    def test_facade_review_update_rejects_relationship_fields(self):
+    def test_facade_review_update_rejects_unsupported_fields(self):
         facade, _, reviewer, place, review = self._create_review(
             facade=HBnBFacade()
         )
@@ -123,6 +123,7 @@ class TestReview(unittest.TestCase):
         for field, value in (
             ("user_id", "another-user"),
             ("place_id", "another-place"),
+            ("is_active", False),
         ):
             with self.subTest(field=field):
                 with self.assertRaises(ValueError):

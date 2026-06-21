@@ -92,6 +92,22 @@ class TestUser(unittest.TestCase):
         with self.assertRaises(ValueError):
             user.update({"email": "invalid-email"})
 
+    def test_facade_user_update_rejects_unsupported_fields(self):
+        facade = HBnBFacade()
+        user = facade.create_user(
+            {
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+            }
+        )
+
+        with self.assertRaises(ValueError):
+            facade.update_user(
+                user.id,
+                {"is_admin": True},
+            )
+
     def test_add_place(self):
         user = User("Ada", "Lovelace", "ada@example.com")
         place = object()

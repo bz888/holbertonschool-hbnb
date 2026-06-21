@@ -93,6 +93,19 @@ class TestAmenity(unittest.TestCase):
 
         self.assertEqual(updated_amenity.name, "Parking")
 
+    def test_facade_amenity_update_rejects_unsupported_fields(self):
+        facade = HBnBFacade()
+        amenity = facade.create_amenity({"name": "Wi-Fi"})
+
+        with self.assertRaises(ValueError):
+            facade.update_amenity(
+                amenity.id,
+                {
+                    "name": "Parking",
+                    "is_active": False,
+                },
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
