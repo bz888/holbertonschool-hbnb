@@ -1,25 +1,5 @@
 # TODOs:
 
-### Implement SWAGGER docs
-### ensure working tests
 ### FIX for updates and req.body validator
 
-- #### PUT /api/v1/places/<place_id>
-- #### PUT /api/v1/users/<user_id>
-- #### PUT /api/v1/amenities/<amenity_id>
-
-POST routes
-
-```
-TODO: 
-Need to update logic on reviews and amenities, as if req.body contains ameneities, it would just update that field, req.body should just take an array of "amenity IDs" then in facade, it would hit get, if does not exist it should throw (OR add to DB).
-need validation against exisitng DB content
-
-this is the same for reviews.
-
-should not be able to update owner ID
-
-should resp with msg and ok not updated content.
-
-add validators on non accepted keys
-```
+All POST routes

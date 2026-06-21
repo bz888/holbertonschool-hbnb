@@ -902,6 +902,18 @@ res
 {
   "error": "Review rating must be an integer from 1 to 5"
 }
+
+req
+{
+  "text": "Excellent location",
+  "rating": 5,
+  "user_id": "7aaf935c-81fa-4982-a1c9-8f6e0b52bd77",
+  "place_id": "{{place_id}}"
+}
+res
+{
+  "error": "Owners cannot review their own place"
+}
 ```
 
 ### 404
