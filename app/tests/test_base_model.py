@@ -1,5 +1,6 @@
 import sys
 import unittest
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -13,8 +14,15 @@ class TestBaseModel(unittest.TestCase):
         model = BaseModel()
 
         self.assertIsInstance(model.id, str)
+        self.assertEqual(str(uuid.UUID(model.id)), model.id)
         self.assertIsInstance(model.created_at, datetime)
         self.assertIsInstance(model.updated_at, datetime)
+
+    def test_base_models_have_unique_ids(self):
+        first_model = BaseModel()
+        second_model = BaseModel()
+
+        self.assertNotEqual(first_model.id, second_model.id)
 
     def test_save_updates_updated_at(self):
         model = BaseModel()

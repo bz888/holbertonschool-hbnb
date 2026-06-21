@@ -26,6 +26,15 @@ class TestAmenity(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     Amenity(name)
 
+    def test_amenity_rejects_non_string_name(self):
+        for name in (None, 42, True):
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "Amenity name must be a string",
+                ):
+                    Amenity(name)
+
     def test_amenity_rejects_name_longer_than_50_characters(self):
         with self.assertRaises(ValueError):
             Amenity("A" * 51)
@@ -44,7 +53,15 @@ class TestAmenity(unittest.TestCase):
     def test_to_dict(self):
         amenity = Amenity("Parking")
 
-        self.assertEqual(amenity.to_dict()["name"], "Parking")
+        self.assertEqual(
+            amenity.to_dict(),
+            {
+                "id": amenity.id,
+                "name": "Parking",
+                "created_at": amenity.created_at.isoformat(),
+                "updated_at": amenity.updated_at.isoformat(),
+            },
+        )
 
     def test_facade_raises_when_amenity_is_not_found(self):
         facade = HBnBFacade()

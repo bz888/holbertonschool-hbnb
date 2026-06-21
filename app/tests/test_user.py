@@ -10,6 +10,23 @@ from utils.errors.user import EmailAlreadyRegistered, UserNotFound
 
 
 class TestUser(unittest.TestCase):
+    def _create_facade_user(
+        self,
+        facade=None,
+        email="ada@example.com",
+        first_name="Ada",
+        last_name="Lovelace",
+    ):
+        facade = facade or HBnBFacade()
+        user = facade.create_user(
+            {
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+            }
+        )
+        return facade, user
+
     def test_create_valid_user(self):
         user = User("Ada", "Lovelace", "ada@example.com")
 
@@ -47,6 +64,21 @@ class TestUser(unittest.TestCase):
                         last_name,
                         "ada@example.com",
                     )
+
+    def test_user_rejects_non_string_names_and_email(self):
+        invalid_fields = (
+            (None, "Lovelace", "ada@example.com", "First name"),
+            ("Ada", 42, "ada@example.com", "Last name"),
+            ("Ada", "Lovelace", False, "Email"),
+        )
+
+        for first_name, last_name, email, field_name in invalid_fields:
+            with self.subTest(field_name=field_name):
+                with self.assertRaisesRegex(
+                    ValueError,
+                    f"{field_name} must be a string",
+                ):
+                    User(first_name, last_name, email)
 
     def test_user_rejects_names_longer_than_50_characters(self):
         with self.assertRaises(ValueError):
@@ -91,6 +123,29 @@ class TestUser(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             user.update({"email": "invalid-email"})
+
+    def test_user_to_dict_serializes_complete_model(self):
+        user = User(
+            "Ada",
+            "Lovelace",
+            "ada@example.com",
+            is_admin=True,
+            is_active=False,
+        )
+
+        self.assertEqual(
+            user.to_dict(),
+            {
+                "id": user.id,
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+                "is_admin": True,
+                "is_active": False,
+                "created_at": user.created_at.isoformat(),
+                "updated_at": user.updated_at.isoformat(),
+            },
+        )
 
     def test_facade_user_update_rejects_unsupported_fields(self):
         facade = HBnBFacade()
@@ -168,6 +223,66 @@ class TestUser(unittest.TestCase):
                     "last_name": "Hopper",
                     "email": "  ADA@EXAMPLE.COM  ",
                 }
+            )
+
+    def test_facade_updates_and_normalizes_user_email(self):
+        facade, user = self._create_facade_user()
+
+        updated_user = facade.update_user(
+            user.id,
+            {"email": "  AUGUSTA@EXAMPLE.COM  "},
+        )
+
+        self.assertIs(updated_user, user)
+        self.assertEqual(user.email, "augusta@example.com")
+        self.assertIs(
+            facade.get_user_by_email(" AUGUSTA@EXAMPLE.COM "),
+            user,
+        )
+
+    def test_facade_allows_user_to_keep_same_normalized_email(self):
+        facade, user = self._create_facade_user()
+
+        updated_user = facade.update_user(
+            user.id,
+            {"email": "  ADA@EXAMPLE.COM  "},
+        )
+
+        self.assertIs(updated_user, user)
+        self.assertEqual(user.email, "ada@example.com")
+
+    def test_facade_rejects_email_update_collision(self):
+        facade, user = self._create_facade_user()
+        _, other_user = self._create_facade_user(
+            facade=facade,
+            email="grace@example.com",
+            first_name="Grace",
+            last_name="Hopper",
+        )
+
+        with self.assertRaises(EmailAlreadyRegistered):
+            facade.update_user(
+                user.id,
+                {"email": " GRACE@EXAMPLE.COM "},
+            )
+
+        self.assertEqual(user.email, "ada@example.com")
+        self.assertEqual(other_user.email, "grace@example.com")
+
+    def test_facade_email_lookup_returns_none_when_missing(self):
+        facade = HBnBFacade()
+
+        self.assertIsNone(
+            facade.get_user_by_email("missing@example.com")
+        )
+
+    def test_facade_user_update_raises_when_user_is_missing(self):
+        facade = HBnBFacade()
+
+        with self.assertRaises(UserNotFound):
+            facade.update_user(
+                "missing-user",
+                {"email": "new@example.com"},
             )
 
     def test_soft_delete_user_sets_inactive_flag(self):

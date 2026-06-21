@@ -64,6 +64,23 @@ class TestReview(unittest.TestCase):
                         self.user,
                     )
 
+    def test_review_rejects_non_string_text(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "Review text must be a string",
+        ):
+            Review(None, 5, self.place, self.user)
+
+    def test_review_trims_text(self):
+        review = Review(
+            "  Great stay  ",
+            5,
+            self.place,
+            self.user,
+        )
+
+        self.assertEqual(review.text, "Great stay")
+
     def test_review_rejects_rating_outside_1_to_5(self):
         for rating in (0, 6, -1, 1.5, True, "5"):
             with self.subTest(rating=rating):
@@ -96,6 +113,27 @@ class TestReview(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             review.update({"rating": 6})
+
+    def test_review_to_dict_serializes_complete_model(self):
+        review = Review(
+            "Great stay",
+            5,
+            self.place,
+            self.user,
+        )
+
+        self.assertEqual(
+            review.to_dict(),
+            {
+                "id": review.id,
+                "text": "Great stay",
+                "rating": 5,
+                "place_id": self.place.id,
+                "user_id": self.user.id,
+                "created_at": review.created_at.isoformat(),
+                "updated_at": review.updated_at.isoformat(),
+            },
+        )
 
     def test_facade_review_update_only_changes_text_and_rating(self):
         facade, _, reviewer, place, review = self._create_review(

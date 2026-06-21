@@ -7,30 +7,30 @@ pip install -r requirements.txt
 python run.py
 ```
 
-## Review Design
+## Tests and Coverage
 
-Reviews are written by users about places:
+See the [test catalogue](tests/TEST_CATALOG.md) for the complete list of unit
+and integration tests and the behavior covered by each test.
 
-```http
-POST /api/v1/places/<place_id>/reviews
-GET /api/v1/users/<user_id>/reviews
+To display the stored coverage report:
+
+```bash
+./venv/bin/coverage report -m
 ```
 
-Users do not review other users in the current model.
+## Current Relationship Shortfalls
 
-Users and places use `is_active` for soft deletion, preserving their existing reviews.
+### Loose Relationship References
 
-Users can also be permanently deleted. Hard deletion currently leaves existing reviews and places holding their in-memory user reference; soft deletion or anonymization should be preferred when those relationships must remain valid.
+Hard deletion can leave stale in-memory references between users, places,
+amenities, and reviews. The `/places/<place_id>/reviews` route currently
+supports only `GET` and `POST`; a future `PUT` route could support replacing a
+place's complete review collection.
 
-```http
-DELETE /api/v1/users/<user_id>/soft-delete
-DELETE /api/v1/users/<user_id>
-```
+### Full Replacement with Place PUT
 
-## Hard Deletion and Relationships
-
-Hard deletion removes an object from its repository but does not automatically remove every in-memory reference to it. Deleting a user can therefore leave existing places and reviews referencing that user. Likewise, deleting an amenity can leave existing places referencing the deleted amenity.
-
-Soft deletion is preferred for related entities because it preserves relationship integrity. A future persistence layer should handle hard deletion with cascading cleanup, restricted deletion, or anonymization.
-
-`POST /api/v1/reviews/` is included for task compliance, although the place-based POST route represents the relationship more clearly.
+Updating `amenity_ids` through `PUT /places/<place_id>` replaces the place's
+entire amenity collection. For example, an existing Wi-Fi amenity is removed
+if its ID is omitted from the new list. Reviews are not currently accepted by
+the place `PUT` route, but equivalent full-replacement behavior could be added
+as a future feature.

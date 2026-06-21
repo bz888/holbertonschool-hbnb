@@ -32,6 +32,63 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
 
+    def _create_user(
+        self,
+        first_name="Owner",
+        last_name="User",
+        email="owner@example.com",
+    ):
+        response = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        return response.get_json()
+
+    def _create_amenity(self, name="Wi-Fi"):
+        response = self.client.post(
+            "/api/v1/amenities/",
+            json={"name": name},
+        )
+        self.assertEqual(response.status_code, 201)
+        return response.get_json()
+
+    def _create_place(self, owner_id, amenity_ids=None):
+        place_data = {
+            "title": "Flat",
+            "description": "Nice flat",
+            "price": 100,
+            "latitude": 0,
+            "longitude": 0,
+            "owner_id": owner_id,
+        }
+        if amenity_ids is not None:
+            place_data["amenity_ids"] = amenity_ids
+
+        response = self.client.post(
+            "/api/v1/places/",
+            json=place_data,
+        )
+        self.assertEqual(response.status_code, 201)
+        return response.get_json()
+
+    def _create_review(self, place_id, user_id):
+        response = self.client.post(
+            "/api/v1/reviews/",
+            json={
+                "text": "Great stay",
+                "rating": 5,
+                "place_id": place_id,
+                "user_id": user_id,
+            },
+        )
+        self.assertEqual(response.status_code, 201)
+        return response.get_json()
+
     def test_not_found_and_validation_errors_use_global_handlers(self):
         amenity = self.client.post(
             "/api/v1/amenities/",
@@ -87,6 +144,88 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
 
         for response, expected_status, expected_body in checks:
             self.assertEqual(response.status_code, expected_status)
+            self.assertEqual(response.get_json(), expected_body)
+
+    def test_missing_mutation_and_nested_routes_return_404(self):
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        checks = (
+            (
+                self.client.put(
+                    "/api/v1/users/missing",
+                    json={"email": "new@example.com"},
+                ),
+                {"error": "User 'missing' not found"},
+            ),
+            (
+                self.client.delete("/api/v1/users/missing"),
+                {"error": "User 'missing' not found"},
+            ),
+            (
+                self.client.delete(
+                    "/api/v1/users/missing/soft-delete"
+                ),
+                {"error": "User 'missing' not found"},
+            ),
+            (
+                self.client.get("/api/v1/users/missing/reviews"),
+                {"error": "User 'missing' not found"},
+            ),
+            (
+                self.client.put(
+                    "/api/v1/amenities/missing",
+                    json={"name": "Pool"},
+                ),
+                {"error": "Amenity 'missing' not found"},
+            ),
+            (
+                self.client.delete("/api/v1/amenities/missing"),
+                {"error": "Amenity 'missing' not found"},
+            ),
+            (
+                self.client.put(
+                    "/api/v1/places/missing",
+                    json={"title": "Beach house"},
+                ),
+                {"error": "Place 'missing' not found"},
+            ),
+            (
+                self.client.delete("/api/v1/places/missing"),
+                {"error": "Place 'missing' not found"},
+            ),
+            (
+                self.client.get("/api/v1/places/missing/reviews"),
+                {"error": "Place 'missing' not found"},
+            ),
+            (
+                self.client.post(
+                    "/api/v1/places/missing/reviews",
+                    json={
+                        "text": "Great stay",
+                        "rating": 5,
+                        "user_id": reviewer["id"],
+                    },
+                ),
+                {"error": "Place 'missing' not found"},
+            ),
+            (
+                self.client.put(
+                    "/api/v1/reviews/missing",
+                    json={"rating": 4},
+                ),
+                {"error": "Review 'missing' not found"},
+            ),
+            (
+                self.client.delete("/api/v1/reviews/missing"),
+                {"error": "Review 'missing' not found"},
+            ),
+        )
+
+        for response, expected_body in checks:
+            self.assertEqual(response.status_code, 404)
             self.assertEqual(response.get_json(), expected_body)
 
     def test_conflict_and_business_rule_errors_use_global_handlers(self):
@@ -200,47 +339,18 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.assertIn("updated_at", user.to_dict())
 
     def test_amenity_and_review_responses_exclude_timestamps(self):
-        owner = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Owner",
-                "last_name": "User",
-                "email": "owner@example.com",
-            },
-        ).get_json()
-        reviewer = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Review",
-                "last_name": "Author",
-                "email": "reviewer@example.com",
-            },
-        ).get_json()
-        amenity = self.client.post(
-            "/api/v1/amenities/",
-            json={"name": "Wi-Fi"},
-        ).get_json()
-        place = self.client.post(
-            "/api/v1/places/",
-            json={
-                "title": "Flat",
-                "description": "Nice flat",
-                "price": 100,
-                "latitude": 0,
-                "longitude": 0,
-                "owner_id": owner["id"],
-                "amenity_ids": [amenity["id"]],
-            },
-        ).get_json()
-        review = self.client.post(
-            "/api/v1/reviews/",
-            json={
-                "text": "Great stay",
-                "rating": 5,
-                "user_id": reviewer["id"],
-                "place_id": place["id"],
-            },
-        ).get_json()
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        amenity = self._create_amenity()
+        place = self._create_place(
+            owner["id"],
+            amenity_ids=[amenity["id"]],
+        )
+        review = self._create_review(place["id"], reviewer["id"])
 
         amenity_keys = {"id", "name"}
         review_keys = {
@@ -364,42 +474,14 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.assertIsNone(facade.user_repo.get(hard_user_id))
 
     def test_review_update_rejects_user_and_place_changes(self):
-        owner = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Owner",
-                "last_name": "User",
-                "email": "owner@example.com",
-            },
-        ).get_json()
-        reviewer = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Review",
-                "last_name": "Author",
-                "email": "reviewer@example.com",
-            },
-        ).get_json()
-        place = self.client.post(
-            "/api/v1/places/",
-            json={
-                "title": "Flat",
-                "description": "Nice flat",
-                "price": 100,
-                "latitude": 0,
-                "longitude": 0,
-                "owner_id": owner["id"],
-            },
-        ).get_json()
-        review = self.client.post(
-            "/api/v1/reviews/",
-            json={
-                "text": "Great stay",
-                "rating": 5,
-                "user_id": reviewer["id"],
-                "place_id": place["id"],
-            },
-        ).get_json()
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        place = self._create_place(owner["id"])
+        review = self._create_review(place["id"], reviewer["id"])
 
         for payload in (
             {"user_id": owner["id"]},
@@ -423,37 +505,14 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 )
 
     def test_updates_reject_unsupported_fields(self):
-        owner = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Owner",
-                "last_name": "User",
-                "email": "owner@example.com",
-            },
-        ).get_json()
-        replacement_owner = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Replacement",
-                "last_name": "Owner",
-                "email": "replacement@example.com",
-            },
-        ).get_json()
-        amenity = self.client.post(
-            "/api/v1/amenities/",
-            json={"name": "Wi-Fi"},
-        ).get_json()
-        place = self.client.post(
-            "/api/v1/places/",
-            json={
-                "title": "Flat",
-                "description": "Nice flat",
-                "price": 100,
-                "latitude": 0,
-                "longitude": 0,
-                "owner_id": owner["id"],
-            },
-        ).get_json()
+        owner = self._create_user()
+        replacement_owner = self._create_user(
+            first_name="Replacement",
+            last_name="Owner",
+            email="replacement@example.com",
+        )
+        amenity = self._create_amenity()
+        place = self._create_place(owner["id"])
 
         checks = (
             (
@@ -513,25 +572,8 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         )
 
     def test_place_delete_route_hard_deletes_place(self):
-        owner = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Owner",
-                "last_name": "User",
-                "email": "owner@example.com",
-            },
-        ).get_json()
-        place = self.client.post(
-            "/api/v1/places/",
-            json={
-                "title": "Flat",
-                "description": "Nice flat",
-                "price": 100,
-                "latitude": 0,
-                "longitude": 0,
-                "owner_id": owner["id"],
-            },
-        ).get_json()
+        owner = self._create_user()
+        place = self._create_place(owner["id"])
 
         response = self.client.delete(
             f"/api/v1/places/{place['id']}"
@@ -553,48 +595,106 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             {"error": f"Place '{place['id']}' not found"},
         )
 
-    def test_place_details_include_nested_relationships(self):
-        owner = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Owner",
-                "last_name": "User",
-                "email": "owner@example.com",
-            },
-        ).get_json()
-        reviewer = self.client.post(
-            "/api/v1/users/",
-            json={
-                "first_name": "Review",
-                "last_name": "Author",
-                "email": "reviewer@example.com",
-            },
-        ).get_json()
-        amenity = self.client.post(
-            "/api/v1/amenities/",
-            json={"name": "Wi-Fi"},
-        ).get_json()
-        place = self.client.post(
-            "/api/v1/places/",
-            json={
-                "title": "Flat",
-                "description": "Nice flat",
-                "price": 100,
-                "latitude": 0,
-                "longitude": 0,
-                "owner_id": owner["id"],
-                "amenity_ids": [amenity["id"]],
-            },
-        ).get_json()
-        review = self.client.post(
-            "/api/v1/reviews/",
+    def test_place_update_route_succeeds(self):
+        owner = self._create_user()
+        place = self._create_place(owner["id"])
+
+        response = self.client.put(
+            f"/api/v1/places/{place['id']}",
+            json={"title": "Beach house"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.get_json(),
+            {"message": "Place updated successfully"},
+        )
+        self.assertEqual(
+            facade.get_place(place["id"]).title,
+            "Beach house",
+        )
+
+    def test_place_list_and_nested_review_creation_routes(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        place = self._create_place(owner["id"])
+
+        list_response = self.client.get("/api/v1/places/")
+        review_response = self.client.post(
+            f"/api/v1/places/{place['id']}/reviews",
             json={
                 "text": "Great stay",
                 "rating": 5,
                 "user_id": reviewer["id"],
-                "place_id": place["id"],
             },
-        ).get_json()
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(
+            [item["id"] for item in list_response.get_json()],
+            [place["id"]],
+        )
+        self.assertEqual(review_response.status_code, 201)
+        self.assertEqual(
+            review_response.get_json(),
+            {
+                "id": review_response.get_json()["id"],
+                "text": "Great stay",
+                "rating": 5,
+                "place_id": place["id"],
+                "user_id": reviewer["id"],
+            },
+        )
+
+    def test_amenity_and_review_delete_routes(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        amenity = self._create_amenity()
+        place = self._create_place(owner["id"])
+        review = self._create_review(place["id"], reviewer["id"])
+
+        amenity_response = self.client.delete(
+            f"/api/v1/amenities/{amenity['id']}"
+        )
+        review_response = self.client.delete(
+            f"/api/v1/reviews/{review['id']}"
+        )
+
+        self.assertEqual(amenity_response.status_code, 200)
+        self.assertEqual(
+            amenity_response.get_json(),
+            {"message": "Amenity deleted successfully"},
+        )
+        self.assertIsNone(facade.amenity_repo.get(amenity["id"]))
+
+        self.assertEqual(review_response.status_code, 200)
+        self.assertEqual(
+            review_response.get_json(),
+            {"message": "Review deleted successfully"},
+        )
+        self.assertIsNone(facade.review_repo.get(review["id"]))
+
+    def test_place_details_include_nested_relationships(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        amenity = self._create_amenity()
+        place = self._create_place(
+            owner["id"],
+            amenity_ids=[amenity["id"]],
+        )
+        review = self._create_review(place["id"], reviewer["id"])
 
         response = self.client.get(
             f"/api/v1/places/{place['id']}"
