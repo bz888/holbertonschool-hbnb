@@ -2,10 +2,10 @@
   "info": {
     "_postman_id": "5dd65cf0-d878-4aa9-bca8-89eb94ddd75d",
     "name": "HBnB API v1",
-    "description": "Import-ready collection generated from the Flask-RESTX Swagger document at /swagger.json and the api/v1 route implementations. It covers all 11 paths and 24 unique operations. Run the collection in order: Setup creates and captures related resource IDs, the resource folders exercise the API, and Cleanup removes the created data.",
+    "description": "Import-ready collection generated from the Flask-RESTX Swagger document at /swagger.json and the api/v1 route implementations. It covers all 10 paths and 23 unique operations. Run the collection in order: Setup creates and captures related resource IDs, the resource folders exercise the API, and Cleanup removes the created data.",
     "version": {
       "major": 1,
-      "minor": 0,
+      "minor": 1,
       "patch": 0
     },
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -508,6 +508,15 @@
           }
         },
         {
+          "name": "Delete Nested Review",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/reviews/{{nested_review_id}}",
+            "description": "Deletes the review created through POST /api/v1/places/{place_id}/reviews."
+          }
+        },
+        {
           "name": "Delete Place",
           "request": {
             "method": "DELETE",
@@ -526,21 +535,21 @@
           }
         },
         {
-          "name": "Soft Delete User",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/users/{{user_id}}/soft-delete",
-            "description": "DELETE /api/v1/users/{user_id}/soft-delete"
-          }
-        },
-        {
-          "name": "Hard Delete User",
+          "name": "Delete Owner",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": "{{base_url}}/users/{{user_id}}",
             "description": "DELETE /api/v1/users/{user_id}"
+          }
+        },
+        {
+          "name": "Delete Reviewer",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/users/{{reviewer_id}}",
+            "description": "Deletes the second user created by the setup workflow."
           }
         }
       ]
