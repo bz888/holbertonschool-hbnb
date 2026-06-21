@@ -109,15 +109,14 @@ class PlaceResource(Resource):
         place = facade.get_place(place_id)
         return place, 200
 
-    @api.marshal_with(place_response_model)
     @api.expect(place_update_model, validate=True)
     @api.response(200, 'Place successfully updated')
     @api.response(400, 'Invalid input data')
     @api.response(404, 'Place not found')
     def put(self, place_id):
         """Update place details by ID"""
-        place = facade.update_place(place_id, api.payload)
-        return place, 200
+        facade.update_place(place_id, api.payload)
+        return {'message': 'Place updated successfully'}, 200
 
     @api.response(200, 'Place successfully deleted')
     @api.response(404, 'Place not found')

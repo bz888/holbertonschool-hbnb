@@ -73,15 +73,14 @@ class ReviewResource(Resource):
         review = facade.get_review(review_id)
         return review, 200
 
-    @api.marshal_with(review_response_model)
     @api.expect(review_update_model, validate=True)
     @api.response(200, "Review successfully updated")
     @api.response(400, "Invalid input data")
     @api.response(404, "Review not found")
     def put(self, review_id):
         """Update review details by ID"""
-        review = facade.update_review(review_id, api.payload)
-        return review, 200
+        facade.update_review(review_id, api.payload)
+        return {"message": "Review updated successfully"}, 200
 
     @api.response(200, "Review successfully deleted")
     @api.response(404, "Review not found")

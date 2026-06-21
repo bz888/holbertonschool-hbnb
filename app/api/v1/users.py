@@ -106,7 +106,6 @@ class UserResource(Resource):
         user = facade.get_user(user_id)
         return user, 200
 
-    @api.marshal_with(user_response_model)
     @api.expect(user_update_model, validate=True)
     @api.response(200, "User successfully updated")
     @api.response(400, "Invalid input data")
@@ -114,8 +113,8 @@ class UserResource(Resource):
     @api.response(400, "Email already registered")
     def put(self, user_id):
         """Update user details by ID."""
-        user = facade.update_user(user_id, api.payload)
-        return user, 200
+        facade.update_user(user_id, api.payload)
+        return {"message": "User updated successfully"}, 200
 
     @api.response(200, "User permanently deleted")
     @api.response(404, "User not found")

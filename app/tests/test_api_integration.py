@@ -176,12 +176,17 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         for response in (
             created_response,
             retrieved_response,
-            updated_response,
         ):
             self.assertEqual(
                 set(response.get_json()),
                 expected_keys,
             )
+
+        self.assertEqual(updated_response.status_code, 200)
+        self.assertEqual(
+            updated_response.get_json(),
+            {"message": "User updated successfully"},
+        )
 
         self.assertEqual(
             set(listed_response.get_json()[0]),
@@ -257,14 +262,14 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             f"/api/v1/amenities/{amenity['id']}",
             json={"name": "Parking"},
         )
+        review_update_response = self.client.put(
+            f"/api/v1/reviews/{review['id']}",
+            json={"rating": 4},
+        )
         review_responses = (
             review,
             self.client.get(
                 f"/api/v1/reviews/{review['id']}"
-            ).get_json(),
-            self.client.put(
-                f"/api/v1/reviews/{review['id']}",
-                json={"rating": 4},
             ).get_json(),
             self.client.get("/api/v1/reviews/").get_json()[0],
             self.client.get(
@@ -281,8 +286,33 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             {"message": "Amenity updated successfully"},
         )
 
+        self.assertEqual(review_update_response.status_code, 200)
+        self.assertEqual(
+            review_update_response.get_json(),
+            {"message": "Review updated successfully"},
+        )
+
         for response in review_responses:
             self.assertEqual(set(response), review_keys)
+
+        self.assertEqual(
+            facade.get_review(review["id"]).rating,
+            4,
+        )
+
+        place_update_response = self.client.put(
+            f"/api/v1/places/{place['id']}",
+            json={"title": "Updated Flat"},
+        )
+        self.assertEqual(place_update_response.status_code, 200)
+        self.assertEqual(
+            place_update_response.get_json(),
+            {"message": "Place updated successfully"},
+        )
+        self.assertEqual(
+            facade.get_place(place["id"]).title,
+            "Updated Flat",
+        )
 
         place_review = self.client.get(
             f"/api/v1/places/{place['id']}/reviews"
