@@ -5,6 +5,10 @@ git clone https://github.com/bz888/holbertonschool-hbnb.git
 ```
 
 ```bash
+cd app/
+```
+
+```bash
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -21,6 +25,11 @@ To display the stored coverage report:
 ```bash
 ./venv/bin/coverage report -m
 ```
+
+### Manual testing
+
+Refer to `test/regression_test_evidence` for all recorded testing for all routes and all status codes.
+
 
 ## Current Relationship Shortfalls
 
