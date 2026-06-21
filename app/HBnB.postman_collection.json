@@ -1,54 +1,86 @@
 {
   "info": {
     "_postman_id": "5dd65cf0-d878-4aa9-bca8-89eb94ddd75d",
-    "name": "HBnB API",
-    "description": "Postman collection covering all HBnB API v1 routes. Create an owner, reviewer, amenity, and place before running review requests. Run delete requests last.",
+    "name": "HBnB API v1",
+    "description": "Import-ready collection generated from the Flask-RESTX Swagger document at /swagger.json and the api/v1 route implementations. It covers all 11 paths and 24 unique operations. Run the collection in order: Setup creates and captures related resource IDs, the resource folders exercise the API, and Cleanup removes the created data.",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    },
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Returns a successful status', function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+          "});",
+          "",
+          "pm.test('Returns JSON', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "});"
+        ]
+      }
+    }
+  ],
   "variable": [
     {
       "key": "base_url",
-      "value": "http://127.0.0.1:8080/api/v1"
+      "value": "http://127.0.0.1:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "swagger_url",
+      "value": "http://127.0.0.1:8080/swagger.json",
+      "type": "string"
     },
     {
       "key": "user_id",
-      "value": ""
+      "value": "",
+      "type": "string"
     },
     {
       "key": "reviewer_id",
-      "value": ""
+      "value": "",
+      "type": "string"
     },
     {
       "key": "amenity_id",
-      "value": ""
+      "value": "",
+      "type": "string"
     },
     {
       "key": "place_id",
-      "value": ""
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "nested_review_id",
+      "value": "",
+      "type": "string"
     },
     {
       "key": "review_id",
-      "value": ""
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
-      "name": "Users",
+      "name": "00 - Setup (Run First)",
+      "description": "Creates the related resources required by the remaining requests and stores their IDs as collection variables.",
       "item": [
         {
-          "name": "List Users",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/users/"
-          }
-        },
-        {
-          "name": "Create User",
+          "name": "Create Owner",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    pm.collectionVariables.set('user_id', pm.response.json().id);",
@@ -67,17 +99,24 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Ada\",\n  \"last_name\": \"Lovelace\",\n  \"email\": \"ada.{{$timestamp}}@example.com\"\n}"
+              "raw": "{\n  \"first_name\": \"Ada\",\n  \"last_name\": \"Lovelace\",\n  \"email\": \"owner.{{$guid}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": "{{base_url}}/users/"
+            "url": "{{base_url}}/users/",
+            "description": "POST /api/v1/users/ — creates the place owner and saves the returned ID as user_id."
           }
         },
         {
-          "name": "Create Reviewer (Setup)",
+          "name": "Create Reviewer",
           "event": [
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    pm.collectionVariables.set('reviewer_id', pm.response.json().id);",
@@ -96,71 +135,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Grace\",\n  \"last_name\": \"Hopper\",\n  \"email\": \"grace.{{$timestamp}}@example.com\"\n}"
-            },
-            "url": "{{base_url}}/users/"
-          }
-        },
-        {
-          "name": "Get User",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/users/{{user_id}}"
-          }
-        },
-        {
-          "name": "Update User",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+              "raw": "{\n  \"first_name\": \"Grace\",\n  \"last_name\": \"Hopper\",\n  \"email\": \"reviewer.{{$guid}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Augusta Ada\"\n}"
             },
-            "url": "{{base_url}}/users/{{user_id}}"
-          }
-        },
-        {
-          "name": "List Reviews Written by User",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/users/{{reviewer_id}}/reviews"
-          }
-        },
-        {
-          "name": "Soft Delete User",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/users/{{user_id}}/soft-delete"
-          }
-        },
-        {
-          "name": "Hard Delete User (Run Last)",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/users/{{user_id}}"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Amenities",
-      "item": [
-        {
-          "name": "List Amenities",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/amenities/"
+            "url": "{{base_url}}/users/",
+            "description": "Creates a second user because an owner cannot review their own place."
           }
         },
         {
@@ -169,6 +152,7 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    pm.collectionVariables.set('amenity_id', pm.response.json().id);",
@@ -187,55 +171,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Wi-Fi\"\n}"
-            },
-            "url": "{{base_url}}/amenities/"
-          }
-        },
-        {
-          "name": "Get Amenity",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/amenities/{{amenity_id}}"
-          }
-        },
-        {
-          "name": "Update Amenity",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+              "raw": "{\n  \"name\": \"Wi-Fi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"High-speed Wi-Fi\"\n}"
             },
-            "url": "{{base_url}}/amenities/{{amenity_id}}"
-          }
-        },
-        {
-          "name": "Delete Amenity (Run Last)",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/amenities/{{amenity_id}}"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Places",
-      "item": [
-        {
-          "name": "List Places",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/places/"
+            "url": "{{base_url}}/amenities/",
+            "description": "POST /api/v1/amenities/ — saves the returned ID as amenity_id."
           }
         },
         {
@@ -244,6 +188,7 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    pm.collectionVariables.set('place_id', pm.response.json().id);",
@@ -262,9 +207,130 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Melbourne Apartment\",\n  \"description\": \"Central apartment\",\n  \"price\": 150.0,\n  \"latitude\": -37.8136,\n  \"longitude\": 144.9631,\n  \"owner_id\": \"{{user_id}}\",\n  \"amenity_ids\": [\"{{amenity_id}}\"]\n}"
+              "raw": "{\n  \"title\": \"Melbourne Apartment\",\n  \"description\": \"Central apartment near the river\",\n  \"price\": 150.0,\n  \"latitude\": -37.8136,\n  \"longitude\": 144.9631,\n  \"owner_id\": \"{{user_id}}\",\n  \"amenity_ids\": [\n    \"{{amenity_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": "{{base_url}}/places/"
+            "url": "{{base_url}}/places/",
+            "description": "POST /api/v1/places/ — creates a place using the captured owner and amenity IDs."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/users/",
+            "description": "GET /api/v1/users/"
+          }
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/users/{{user_id}}",
+            "description": "GET /api/v1/users/{user_id}"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"Augusta Ada\",\n  \"last_name\": \"Lovelace\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/users/{{user_id}}",
+            "description": "PUT /api/v1/users/{user_id}. Supported fields: first_name, last_name, and email."
+          }
+        },
+        {
+          "name": "List Reviews Written by User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/users/{{reviewer_id}}/reviews",
+            "description": "GET /api/v1/users/{user_id}/reviews"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Amenities",
+      "item": [
+        {
+          "name": "List Amenities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/amenities/",
+            "description": "GET /api/v1/amenities/"
+          }
+        },
+        {
+          "name": "Get Amenity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/amenities/{{amenity_id}}",
+            "description": "GET /api/v1/amenities/{amenity_id}"
+          }
+        },
+        {
+          "name": "Update Amenity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"High-speed Wi-Fi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{base_url}}/amenities/{{amenity_id}}",
+            "description": "PUT /api/v1/amenities/{amenity_id}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Places",
+      "item": [
+        {
+          "name": "List Places",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/places/",
+            "description": "GET /api/v1/places/"
           }
         },
         {
@@ -272,7 +338,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{base_url}}/places/{{place_id}}"
+            "url": "{{base_url}}/places/{{place_id}}",
+            "description": "GET /api/v1/places/{place_id}"
           }
         },
         {
@@ -287,9 +354,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated Melbourne Apartment\",\n  \"price\": 175.0\n}"
+              "raw": "{\n  \"title\": \"Updated Melbourne Apartment\",\n  \"description\": \"Updated central apartment\",\n  \"price\": 175.0,\n  \"amenity_ids\": [\n    \"{{amenity_id}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": "{{base_url}}/places/{{place_id}}"
+            "url": "{{base_url}}/places/{{place_id}}",
+            "description": "PUT /api/v1/places/{place_id}. Supplying amenity_ids replaces the complete amenity collection."
           }
         },
         {
@@ -297,7 +370,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{base_url}}/places/{{place_id}}/reviews"
+            "url": "{{base_url}}/places/{{place_id}}/reviews",
+            "description": "GET /api/v1/places/{place_id}/reviews"
           }
         },
         {
@@ -306,9 +380,10 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('review_id', pm.response.json().id);",
+                  "    pm.collectionVariables.set('nested_review_id', pm.response.json().id);",
                   "}"
                 ]
               }
@@ -324,17 +399,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"text\": \"Great stay\",\n  \"rating\": 5,\n  \"user_id\": \"{{reviewer_id}}\"\n}"
+              "raw": "{\n  \"text\": \"Great stay and excellent location\",\n  \"rating\": 5,\n  \"user_id\": \"{{reviewer_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": "{{base_url}}/places/{{place_id}}/reviews"
-          }
-        },
-        {
-          "name": "Delete Place (Run Last)",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/places/{{place_id}}"
+            "url": "{{base_url}}/places/{{place_id}}/reviews",
+            "description": "POST /api/v1/places/{place_id}/reviews. The place_id is supplied by the URL."
           }
         }
       ]
@@ -347,7 +420,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{base_url}}/reviews/"
+            "url": "{{base_url}}/reviews/",
+            "description": "GET /api/v1/reviews/"
           }
         },
         {
@@ -356,6 +430,7 @@
             {
               "listen": "test",
               "script": {
+                "type": "text/javascript",
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    pm.collectionVariables.set('review_id', pm.response.json().id);",
@@ -374,9 +449,15 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"text\": \"Excellent location\",\n  \"rating\": 5,\n  \"user_id\": \"{{reviewer_id}}\",\n  \"place_id\": \"{{place_id}}\"\n}"
+              "raw": "{\n  \"text\": \"Comfortable and convenient\",\n  \"rating\": 4,\n  \"place_id\": \"{{place_id}}\",\n  \"user_id\": \"{{reviewer_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": "{{base_url}}/reviews/"
+            "url": "{{base_url}}/reviews/",
+            "description": "POST /api/v1/reviews/"
           }
         },
         {
@@ -384,7 +465,8 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{base_url}}/reviews/{{review_id}}"
+            "url": "{{base_url}}/reviews/{{review_id}}",
+            "description": "GET /api/v1/reviews/{review_id}"
           }
         },
         {
@@ -399,17 +481,66 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"text\": \"Updated review text\",\n  \"rating\": 4\n}"
+              "raw": "{\n  \"text\": \"Updated review text\",\n  \"rating\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
-            "url": "{{base_url}}/reviews/{{review_id}}"
+            "url": "{{base_url}}/reviews/{{review_id}}",
+            "description": "PUT /api/v1/reviews/{review_id}. Only text and rating can be updated."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "99 - Cleanup (Run Last)",
+      "description": "Exercises every DELETE operation after the dependent requests have completed.",
+      "item": [
         {
           "name": "Delete Review",
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": "{{base_url}}/reviews/{{review_id}}"
+            "url": "{{base_url}}/reviews/{{review_id}}",
+            "description": "DELETE /api/v1/reviews/{review_id}"
+          }
+        },
+        {
+          "name": "Delete Place",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/places/{{place_id}}",
+            "description": "DELETE /api/v1/places/{place_id}"
+          }
+        },
+        {
+          "name": "Delete Amenity",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/amenities/{{amenity_id}}",
+            "description": "DELETE /api/v1/amenities/{amenity_id}"
+          }
+        },
+        {
+          "name": "Soft Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/users/{{user_id}}/soft-delete",
+            "description": "DELETE /api/v1/users/{user_id}/soft-delete"
+          }
+        },
+        {
+          "name": "Hard Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/users/{{user_id}}",
+            "description": "DELETE /api/v1/users/{user_id}"
           }
         }
       ]
