@@ -8,6 +8,21 @@ from models.review import Review
 from models.user import User
 from persistence.repository import InMemoryRepository
 
+# validators
+from validators.fields import validate_allowed_fields
+
+ALLOWED_REVIEW_UPDATE_FIELDS = {"text", "rating"}
+ALLOWED_USER_UPDATE_FIELDS = {"first_name", "last_name", "email"}
+ALLOWED_AMENITY_UPDATE_FIELDS = {"name"}
+ALLOWED_PLACE_UPDATE_FIELDS = {
+    "title",
+    "description",
+    "price",
+    "latitude",
+    "longitude",
+    "amenity_ids",
+}
+
 
 class HBnBFacade:
     """Coordinate models and in-memory repositories."""
@@ -57,6 +72,12 @@ class HBnBFacade:
         user = self.user_repo.get(user_id)
         if user is None or not user.is_active:
             raise UserNotFound(user_id)
+
+        validate_allowed_fields(
+            user_data,
+            ALLOWED_USER_UPDATE_FIELDS,
+            resource_name="user",
+        )
 
         if "email" in user_data:
             email = User.normalize_email(user_data["email"])
@@ -109,9 +130,7 @@ class HBnBFacade:
     def create_amenity(self, amenity_data):
         name = amenity_data.get("name")
         if not isinstance(name, str) or not name.strip():
-            raise ValueError(
-                "Amenity name must be a non-empty string"
-            )
+            raise ValueError("Amenity name must be a non-empty string")
 
         amenity = Amenity(name=name.strip())
         return self.amenity_repo.add(amenity)
@@ -126,16 +145,20 @@ class HBnBFacade:
         return self.amenity_repo.get_all()
 
     def update_amenity(self, amenity_id, amenity_data):
-        name = amenity_data.get("name")
+        validate_allowed_fields(
+            amenity_data,
+            ALLOWED_AMENITY_UPDATE_FIELDS,
+            resource_name="amenity",
+        )
 
         amenity = self.amenity_repo.get(amenity_id)
         if amenity is None:
             raise AmenityNotFound(amenity_id)
 
+        name = amenity_data.get("name")
+
         if not isinstance(name, str) or not name.strip():
-            raise ValueError(
-                "Amenity name must be a non-empty string"
-            )
+            raise ValueError("Amenity name must be a non-empty string")
 
         updated_amenity = self.amenity_repo.update(
             amenity_id,
@@ -193,17 +216,18 @@ class HBnBFacade:
         return self.place_repo.find_all(is_active=True)
 
     def update_place(self, place_id, place_data):
+
+        validate_allowed_fields(
+            place_data,
+            ALLOWED_PLACE_UPDATE_FIELDS,
+            resource_name="place",
+        )
+
         data = place_data.copy()
+
         place = self.place_repo.get(place_id)
         if place is None or not place.is_active:
             raise PlaceNotFound(place_id)
-
-        if "owner_id" in data:
-            owner_id = data.pop("owner_id")
-            owner = self.user_repo.get(owner_id)
-            if owner is None or not owner.is_active:
-                raise UserNotFound(owner_id)
-            data["owner"] = owner
 
         if "amenity_ids" in data:
             amenities = []
@@ -213,16 +237,6 @@ class HBnBFacade:
                     raise AmenityNotFound(amenity_id)
                 amenities.append(amenity)
             data["amenities"] = amenities
-
-        if "amenities" in data:
-            place.amenities = []
-            for amenity in data.pop("amenities"):
-                place.add_amenity(amenity)
-
-        if "owner" in data and data["owner"] is not place.owner:
-            if place in place.owner.places:
-                place.owner.places.remove(place)
-            data["owner"].add_place(place)
 
         updated_place = self.place_repo.update(place_id, data)
         if updated_place is None:
@@ -284,19 +298,21 @@ class HBnBFacade:
 
     def update_review(self, review_id, review_data):
         data = review_data.copy()
+
         review = self.review_repo.get(review_id)
         if review is None:
             raise ReviewNotFound(review_id)
 
-        unsupported_fields = set(data) - {"text", "rating"}
-        if unsupported_fields:
-            raise ValueError(
-                "Only review text and rating can be updated"
-            )
+        validate_allowed_fields(
+            data,
+            ALLOWED_REVIEW_UPDATE_FIELDS,
+            resource_name="review",
+        )
 
         updated_review = self.review_repo.update(review_id, data)
         if updated_review is None:
             raise ReviewNotFound(review_id)
+
         return updated_review
 
     def delete_review(self, review_id):
