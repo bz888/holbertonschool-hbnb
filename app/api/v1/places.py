@@ -92,7 +92,7 @@ class PlaceResource(Resource):
         facade.update_place(
             place_id,
             api.payload,
-            current_user_id=current_user_id,
+            current_user_id,
         )
         return {"message": "Place updated successfully"}, 200
 

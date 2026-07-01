@@ -23,7 +23,7 @@ and integration tests and the behavior covered by each test.
 To display the stored coverage report:
 
 ```bash
-./venv/bin/coverage report -m
+./.venv/bin/coverage report -m
 ```
 
 ### Manual testing

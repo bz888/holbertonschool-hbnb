@@ -304,6 +304,7 @@ class TestPlace(unittest.TestCase):
             facade.update_place(
                 place.id,
                 {"owner_id": replacement_owner.id},
+                current_user_id=owner.id,
             )
 
         self.assertIs(place.owner, owner)
@@ -311,7 +312,7 @@ class TestPlace(unittest.TestCase):
         self.assertNotIn(place, replacement_owner.places)
 
     def test_facade_updates_place_fields(self):
-        facade, _, place, _ = self._create_facade_place()
+        facade, owner, place, _ = self._create_facade_place()
 
         updated_place = facade.update_place(
             place.id,
@@ -322,6 +323,7 @@ class TestPlace(unittest.TestCase):
                 "latitude": -37.8,
                 "longitude": 144.9,
             },
+            current_user_id=owner.id,
         )
 
         self.assertIs(updated_place, place)
@@ -351,8 +353,20 @@ class TestPlace(unittest.TestCase):
 
         self.assertEqual(place.title, "Flat")
 
+    def test_facade_rejects_place_update_without_authenticated_user(self):
+        facade, _, place, _ = self._create_facade_place()
+
+        with self.assertRaises(UnauthorizedAction):
+            facade.update_place(
+                place.id,
+                {"title": "Beach house"},
+                current_user_id=None,
+            )
+
+        self.assertEqual(place.title, "Flat")
+
     def test_facade_replaces_and_clears_place_amenities(self):
-        facade, _, place, original = self._create_facade_place(
+        facade, owner, place, original = self._create_facade_place(
             ("Wi-Fi",)
         )
         pool = facade.create_amenity({"name": "Pool"})
@@ -361,17 +375,22 @@ class TestPlace(unittest.TestCase):
         facade.update_place(
             place.id,
             {"amenity_ids": [pool.id, parking.id]},
+            current_user_id=owner.id,
         )
 
         self.assertEqual(place.amenities, [pool, parking])
         self.assertNotIn(original[0], place.amenities)
 
-        facade.update_place(place.id, {"amenity_ids": []})
+        facade.update_place(
+            place.id,
+            {"amenity_ids": []},
+            current_user_id=owner.id,
+        )
 
         self.assertEqual(place.amenities, [])
 
     def test_facade_rejects_unknown_amenity_without_changing_place(self):
-        facade, _, place, amenities = self._create_facade_place(
+        facade, owner, place, amenities = self._create_facade_place(
             ("Wi-Fi",)
         )
 
@@ -379,6 +398,7 @@ class TestPlace(unittest.TestCase):
             facade.update_place(
                 place.id,
                 {"amenity_ids": ["missing-amenity"]},
+                current_user_id=owner.id,
             )
 
         self.assertEqual(place.amenities, amenities)
@@ -390,6 +410,7 @@ class TestPlace(unittest.TestCase):
             facade.update_place(
                 "missing-place",
                 {"title": "Beach house"},
+                current_user_id="missing-owner",
             )
 
     def test_delete_place_hard_deletes_place(self):

@@ -242,12 +242,13 @@ class HBnBFacade:
             # is_active=True, future feature
         )
 
-    def update_place(self, place_id, place_data, current_user_id=None):
+    def update_place(self, place_id, place_data, current_user_id):
         place = self.place_repo.get(place_id)
         if place is None:
             raise PlaceNotFound(place_id)
 
-        if current_user_id is not None and place.owner.id != current_user_id:
+# another check for None, as JWT on the api layer is only for extracting user.
+        if current_user_id is None or place.owner.id != current_user_id:
             raise UnauthorizedAction()
 
         validate_allowed_fields(

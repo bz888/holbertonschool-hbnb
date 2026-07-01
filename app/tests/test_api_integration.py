@@ -1,5 +1,6 @@
 import sys
 import unittest
+from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -42,14 +43,23 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         )
         self.client = self.app.test_client()
 
-    def _auth_headers(self, user_id, is_admin=False):
+    def _auth_headers(self, user_id, is_admin=False, expires_delta=None):
+        token_args = {
+            "identity": user_id,
+            "additional_claims": {"is_admin": is_admin},
+        }
+        if expires_delta is not None:
+            token_args["expires_delta"] = expires_delta
+
         with self.app.app_context():
-            token = create_access_token(
-                identity=user_id,
-                additional_claims={"is_admin": is_admin},
-            )
+            token = create_access_token(**token_args)
 
         return {"Authorization": f"Bearer {token}"}
+
+    def _tampered_auth_headers(self, user_id):
+        token = self._auth_headers(user_id)["Authorization"].split(" ", 1)[1]
+        replacement = "a" if token[-1] != "a" else "b"
+        return {"Authorization": f"Bearer {token[:-1]}{replacement}"}
 
     def _create_user(
         self,
@@ -108,6 +118,87 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 201)
         return response.get_json()
+
+    def _protected_write_route_responses(
+        self,
+        owner_id,
+        place_id,
+        review_id,
+        headers=None,
+    ):
+        request_options = {}
+        if headers is not None:
+            request_options["headers"] = headers
+
+        return (
+            (
+                "POST /api/v1/places/",
+                self.client.post(
+                    "/api/v1/places/",
+                    json={
+                        "title": "New flat",
+                        "price": 100,
+                        "latitude": 0,
+                        "longitude": 0,
+                    },
+                    **request_options,
+                ),
+            ),
+            (
+                "PUT /api/v1/places/<place_id>",
+                self.client.put(
+                    f"/api/v1/places/{place_id}",
+                    json={"title": "Updated flat"},
+                    **request_options,
+                ),
+            ),
+            (
+                "POST /api/v1/reviews/",
+                self.client.post(
+                    "/api/v1/reviews/",
+                    json={
+                        "text": "Great stay",
+                        "rating": 5,
+                        "place_id": place_id,
+                    },
+                    **request_options,
+                ),
+            ),
+            (
+                "POST /api/v1/places/<place_id>/reviews",
+                self.client.post(
+                    f"/api/v1/places/{place_id}/reviews",
+                    json={
+                        "text": "Great stay",
+                        "rating": 5,
+                    },
+                    **request_options,
+                ),
+            ),
+            (
+                "PUT /api/v1/reviews/<review_id>",
+                self.client.put(
+                    f"/api/v1/reviews/{review_id}",
+                    json={"rating": 4},
+                    **request_options,
+                ),
+            ),
+            (
+                "DELETE /api/v1/reviews/<review_id>",
+                self.client.delete(
+                    f"/api/v1/reviews/{review_id}",
+                    **request_options,
+                ),
+            ),
+            (
+                "PUT /api/v1/users/<user_id>",
+                self.client.put(
+                    f"/api/v1/users/{owner_id}",
+                    json={"first_name": "Updated"},
+                    **request_options,
+                ),
+            ),
+        )
 
     def test_not_found_and_validation_errors_use_global_handlers(self):
         amenity = self.client.post(
@@ -346,52 +437,60 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         place = self._create_place(owner["id"])
         review = self._create_review(place["id"], reviewer["id"])
 
-        checks = (
-            self.client.post(
-                "/api/v1/places/",
-                json={
-                    "title": "New flat",
-                    "price": 100,
-                    "latitude": 0,
-                    "longitude": 0,
-                },
+        for route, response in self._protected_write_route_responses(
+            owner["id"],
+            place["id"],
+            review["id"],
+        ):
+            with self.subTest(route=route):
+                self.assertEqual(response.status_code, 401)
+                self.assertEqual(
+                    response.get_json(),
+                    {"msg": "Missing Authorization Header"},
+                )
+
+    def test_jwt_protected_write_routes_reject_invalid_tokens(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        place = self._create_place(owner["id"])
+        review = self._create_review(place["id"], reviewer["id"])
+
+        token_cases = (
+            (
+                "malformed",
+                {"Authorization": "Bearer not-a-jwt"},
             ),
-            self.client.put(
-                f"/api/v1/places/{place['id']}",
-                json={"title": "Updated flat"},
+            (
+                "invalid_signature",
+                self._tampered_auth_headers(owner["id"]),
             ),
-            self.client.post(
-                "/api/v1/reviews/",
-                json={
-                    "text": "Great stay",
-                    "rating": 5,
-                    "place_id": place["id"],
-                },
-            ),
-            self.client.post(
-                f"/api/v1/places/{place['id']}/reviews",
-                json={
-                    "text": "Great stay",
-                    "rating": 5,
-                },
-            ),
-            self.client.put(
-                f"/api/v1/reviews/{review['id']}",
-                json={"rating": 4},
-            ),
-            self.client.delete(f"/api/v1/reviews/{review['id']}"),
-            self.client.put(
-                f"/api/v1/users/{owner['id']}",
-                json={"first_name": "Updated"},
+            (
+                "expired",
+                self._auth_headers(
+                    owner["id"],
+                    expires_delta=timedelta(seconds=-1),
+                ),
             ),
         )
 
-        for response in checks:
-            self.assertEqual(response.status_code, 401)
-            self.assertEqual(
-                response.get_json(),
-                {"msg": "Missing Authorization Header"},
-            )
+        for token_case, headers in token_cases:
+            for route, response in self._protected_write_route_responses(
+                owner["id"],
+                place["id"],
+                review["id"],
+                headers=headers,
+            ):
+                with self.subTest(token=token_case, route=route):
+                    self.assertIn(response.status_code, (401, 422))
+                    self.assertIn("msg", response.get_json())
+
+        self.assertEqual(facade.get_place(place["id"]).title, "Flat")
+        self.assertIsNotNone(facade.review_repo.get(review["id"]))
+        self.assertEqual(facade.get_user(owner["id"]).first_name, "Owner")
 
     def test_place_get_routes_remain_public(self):
         owner = self._create_user()
