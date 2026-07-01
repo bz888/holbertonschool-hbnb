@@ -3,6 +3,7 @@ import os
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
     DEBUG = False
     ERROR_INCLUDE_MESSAGE = False
     RESTX_ERROR_404_HELP = False
