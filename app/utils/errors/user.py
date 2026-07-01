@@ -24,6 +24,13 @@ class InvalidCredentials(Exception):
         super().__init__("Invalid credentials")
 
 
+class RestrictedUserFieldUpdate(Exception):
+    """Raised when restricted user fields are updated through this endpoint."""
+
+    def __init__(self):
+        super().__init__("You cannot modify email or password.")
+
+
 class UserNotFound(Exception):
     def __init__(self, user_id):
         super().__init__(f"User '{user_id}' not found")

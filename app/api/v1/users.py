@@ -65,13 +65,17 @@ class UserResource(Resource):
     @api.response(200, "User successfully updated")
     @api.response(400, "Invalid input data")
     @api.response(401, "Missing or invalid JWT")
+    @api.response(403, "Unauthorized action")
     @api.response(404, "User not found")
-    @api.response(400, "Email already registered")
     @jwt_required()
     def put(self, user_id):
         """Update user details by ID."""
-        get_jwt_identity()
-        user = facade.update_user(user_id, api.payload)
+        current_user_id = get_jwt_identity()
+        user = facade.update_user(
+            user_id,
+            api.payload,
+            current_user_id=current_user_id,
+        )
         return user, 200
 
     @api.response(200, "User permanently deleted")

@@ -304,7 +304,36 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.assertEqual(review_response.status_code, 400)
         self.assertEqual(
             review_response.get_json(),
-            {"error": "Owners cannot review their own place"},
+            {"error": "You cannot review your own place."},
+        )
+
+    def test_duplicate_review_attempt_returns_bad_request(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        place = self._create_place(owner["id"])
+        first_review = self._create_review(place["id"], reviewer["id"])
+
+        response = self.client.post(
+            f"/api/v1/places/{place['id']}/reviews",
+            json={
+                "text": "Second review",
+                "rating": 4,
+            },
+            headers=self._auth_headers(reviewer["id"]),
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "You have already reviewed this place."},
+        )
+        self.assertEqual(
+            [review.id for review in facade.get_all_reviews()],
+            [first_review["id"]],
         )
 
     def test_jwt_protected_write_routes_require_token(self):
@@ -494,6 +523,81 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.assertIn("is_active", user.to_dict())
         self.assertIn("created_at", user.to_dict())
         self.assertIn("updated_at", user.to_dict())
+
+    def test_user_update_allows_own_user_token(self):
+        user = self._create_user()
+
+        response = self.client.put(
+            f"/api/v1/users/{user['id']}",
+            json={
+                "first_name": "Augusta",
+                "last_name": "Byron",
+            },
+            headers=self._auth_headers(user["id"]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["first_name"], "Augusta")
+        self.assertEqual(response.get_json()["last_name"], "Byron")
+
+        stored_user = facade.get_user(user["id"])
+        self.assertEqual(stored_user.first_name, "Augusta")
+        self.assertEqual(stored_user.last_name, "Byron")
+
+    def test_user_update_rejects_other_user_token(self):
+        user = self._create_user()
+        other_user = self._create_user(
+            first_name="Other",
+            last_name="User",
+            email="other-user@example.com",
+        )
+
+        response = self.client.put(
+            f"/api/v1/users/{user['id']}",
+            json={"first_name": "Augusta"},
+            headers=self._auth_headers(other_user["id"]),
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "Unauthorized action"},
+        )
+        self.assertEqual(facade.get_user(user["id"]).first_name, "Owner")
+
+    def test_user_update_rejects_email_change(self):
+        user = self._create_user()
+
+        response = self.client.put(
+            f"/api/v1/users/{user['id']}",
+            json={"email": "new@example.com"},
+            headers=self._auth_headers(user["id"]),
+        )
+
+        stored_user = facade.get_user(user["id"])
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "You cannot modify email or password."},
+        )
+        self.assertEqual(stored_user.email, "owner@example.com")
+
+    def test_user_update_rejects_password_change(self):
+        user = self._create_user()
+
+        response = self.client.put(
+            f"/api/v1/users/{user['id']}",
+            json={"password": "new-password"},
+            headers=self._auth_headers(user["id"]),
+        )
+
+        stored_user = facade.get_user(user["id"])
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "You cannot modify email or password."},
+        )
+        self.assertTrue(stored_user.verify_password("test-password"))
 
     def test_user_registration_hashes_password_and_hides_it(self):
         plain_password = "correct horse battery staple"
@@ -722,7 +826,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 {
                     "error": (
                         "Invalid fields for user: is_admin. "
-                        "Allowed fields: email, first_name, last_name"
+                        "Allowed fields: first_name, last_name"
                     )
                 },
             ),
@@ -905,6 +1009,43 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             {"message": "Review deleted successfully"},
         )
         self.assertIsNone(facade.review_repo.get(review["id"]))
+
+    def test_review_update_and_delete_by_non_author_return_forbidden(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        other_user = self._create_user(
+            first_name="Other",
+            last_name="User",
+            email="other-review@example.com",
+        )
+        place = self._create_place(owner["id"])
+        review = self._create_review(place["id"], reviewer["id"])
+
+        update_response = self.client.put(
+            f"/api/v1/reviews/{review['id']}",
+            json={"rating": 4},
+            headers=self._auth_headers(other_user["id"]),
+        )
+        delete_response = self.client.delete(
+            f"/api/v1/reviews/{review['id']}",
+            headers=self._auth_headers(other_user["id"]),
+        )
+
+        for response in (update_response, delete_response):
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(
+                response.get_json(),
+                {"error": "Unauthorized action"},
+            )
+
+        stored_review = facade.get_review(review["id"])
+        self.assertEqual(stored_review.rating, 5)
+        self.assertIn(stored_review, stored_review.user.reviews)
+        self.assertIn(stored_review, stored_review.place.reviews)
 
     def test_place_details_include_nested_relationships(self):
         owner = self._create_user()

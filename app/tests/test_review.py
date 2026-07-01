@@ -8,8 +8,12 @@ from models.place import Place
 from models.review import Review
 from models.user import User
 from services.facade import HBnBFacade
-from utils.errors.place import PlaceNotFound
-from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
+from utils.errors.place import PlaceNotFound, UnauthorizedAction
+from utils.errors.review import (
+    DuplicateReview,
+    OwnerCannotReviewOwnPlace,
+    ReviewNotFound,
+)
 from utils.errors.user import UserNotFound
 
 
@@ -146,12 +150,35 @@ class TestReview(unittest.TestCase):
                 "text": "Updated review",
                 "rating": 4,
             },
+            current_user_id=reviewer.id,
         )
 
         self.assertEqual(updated_review.text, "Updated review")
         self.assertEqual(updated_review.rating, 4)
         self.assertIs(updated_review.user, reviewer)
         self.assertIs(updated_review.place, place)
+
+    def test_facade_rejects_review_update_by_non_author(self):
+        facade, _, _, _, review = self._create_review(
+            facade=HBnBFacade()
+        )
+        other_user = facade.create_user(
+            {
+                "first_name": "Other",
+                "last_name": "User",
+                "email": "other@example.com",
+                "password": "test-password",
+            }
+        )
+
+        with self.assertRaises(UnauthorizedAction):
+            facade.update_review(
+                review.id,
+                {"rating": 4},
+                current_user_id=other_user.id,
+            )
+
+        self.assertEqual(review.rating, 5)
 
     def test_facade_review_update_rejects_unsupported_fields(self):
         facade, _, reviewer, place, review = self._create_review(
@@ -174,6 +201,7 @@ class TestReview(unittest.TestCase):
                     facade.update_review(
                         review.id,
                         {field: value},
+                        current_user_id=reviewer.id,
                     )
 
         self.assertIs(review.user, reviewer)
@@ -293,6 +321,21 @@ class TestReview(unittest.TestCase):
                 }
             )
 
+    def test_user_cannot_review_same_place_twice(self):
+        facade, _, reviewer, place, _ = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        with self.assertRaises(DuplicateReview):
+            facade.create_review(
+                {
+                    "text": "Second review",
+                    "rating": 4,
+                    "place_id": place.id,
+                    "user_id": reviewer.id,
+                }
+            )
+
     def test_reviews_can_be_listed_by_user(self):
         facade, _, reviewer, _, review = self._create_review(facade=HBnBFacade())
 
@@ -349,12 +392,35 @@ class TestReview(unittest.TestCase):
             facade=HBnBFacade()
         )
 
-        facade.delete_review(review.id)
+        facade.delete_review(review.id, current_user_id=reviewer.id)
 
         self.assertNotIn(review, reviewer.reviews)
         self.assertNotIn(review, place.reviews)
         with self.assertRaises(ReviewNotFound):
             facade.get_review(review.id)
+
+    def test_facade_rejects_review_delete_by_non_author(self):
+        facade, _, reviewer, place, review = self._create_review(
+            facade=HBnBFacade()
+        )
+        other_user = facade.create_user(
+            {
+                "first_name": "Other",
+                "last_name": "User",
+                "email": "other-delete@example.com",
+                "password": "test-password",
+            }
+        )
+
+        with self.assertRaises(UnauthorizedAction):
+            facade.delete_review(
+                review.id,
+                current_user_id=other_user.id,
+            )
+
+        self.assertIs(facade.get_review(review.id), review)
+        self.assertIn(review, reviewer.reviews)
+        self.assertIn(review, place.reviews)
 
     def _create_review(self, facade):
         owner = facade.create_user(

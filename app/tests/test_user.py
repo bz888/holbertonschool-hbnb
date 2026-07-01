@@ -6,9 +6,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from models.user import User
 from services.facade import HBnBFacade
+from utils.errors.place import UnauthorizedAction
 from utils.errors.user import (
     EmailAlreadyRegistered,
     PasswordRequired,
+    RestrictedUserFieldUpdate,
     UserNotFound,
 )
 
@@ -167,12 +169,13 @@ class TestUser(unittest.TestCase):
             ValueError,
             (
                 "Invalid fields for user: is_admin\\. "
-                "Allowed fields: email, first_name, last_name"
+                "Allowed fields: first_name, last_name"
             ),
         ):
             facade.update_user(
                 user.id,
                 {"is_admin": True},
+                current_user_id=user.id,
             )
 
         self.assertFalse(user.is_admin)
@@ -252,33 +255,24 @@ class TestUser(unittest.TestCase):
                 }
             )
 
-    def test_facade_updates_and_normalizes_user_email(self):
+    def test_facade_updates_own_user_details(self):
         facade, user = self._create_facade_user()
 
         updated_user = facade.update_user(
             user.id,
-            {"email": "  AUGUSTA@EXAMPLE.COM  "},
+            {
+                "first_name": "Augusta",
+                "last_name": "Byron",
+            },
+            current_user_id=user.id,
         )
 
         self.assertIs(updated_user, user)
-        self.assertEqual(user.email, "augusta@example.com")
-        self.assertIs(
-            facade.get_user_by_email(" AUGUSTA@EXAMPLE.COM "),
-            user,
-        )
-
-    def test_facade_allows_user_to_keep_same_normalized_email(self):
-        facade, user = self._create_facade_user()
-
-        updated_user = facade.update_user(
-            user.id,
-            {"email": "  ADA@EXAMPLE.COM  "},
-        )
-
-        self.assertIs(updated_user, user)
+        self.assertEqual(user.first_name, "Augusta")
+        self.assertEqual(user.last_name, "Byron")
         self.assertEqual(user.email, "ada@example.com")
 
-    def test_facade_rejects_email_update_collision(self):
+    def test_facade_rejects_update_for_another_user(self):
         facade, user = self._create_facade_user()
         _, other_user = self._create_facade_user(
             facade=facade,
@@ -287,14 +281,46 @@ class TestUser(unittest.TestCase):
             last_name="Hopper",
         )
 
-        with self.assertRaises(EmailAlreadyRegistered):
+        with self.assertRaises(UnauthorizedAction):
             facade.update_user(
                 user.id,
-                {"email": " GRACE@EXAMPLE.COM "},
+                {"first_name": "Augusta"},
+                current_user_id=other_user.id,
             )
 
+        self.assertEqual(user.first_name, "Ada")
+
+    def test_facade_rejects_email_update(self):
+        facade, user = self._create_facade_user()
+
+        with self.assertRaises(RestrictedUserFieldUpdate) as context:
+            facade.update_user(
+                user.id,
+                {"email": "augusta@example.com"},
+                current_user_id=user.id,
+            )
+
+        self.assertEqual(
+            str(context.exception),
+            "You cannot modify email or password.",
+        )
         self.assertEqual(user.email, "ada@example.com")
-        self.assertEqual(other_user.email, "grace@example.com")
+
+    def test_facade_rejects_password_update(self):
+        facade, user = self._create_facade_user()
+
+        with self.assertRaises(RestrictedUserFieldUpdate) as context:
+            facade.update_user(
+                user.id,
+                {"password": "new-password"},
+                current_user_id=user.id,
+            )
+
+        self.assertEqual(
+            str(context.exception),
+            "You cannot modify email or password.",
+        )
+        self.assertTrue(user.verify_password("test-password"))
 
     def test_facade_email_lookup_returns_none_when_missing(self):
         facade = HBnBFacade()
@@ -309,7 +335,8 @@ class TestUser(unittest.TestCase):
         with self.assertRaises(UserNotFound):
             facade.update_user(
                 "missing-user",
-                {"email": "new@example.com"},
+                {"first_name": "New"},
+                current_user_id="missing-user",
             )
 
     def test_soft_delete_user_sets_inactive_flag(self):

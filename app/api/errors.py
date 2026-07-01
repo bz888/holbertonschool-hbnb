@@ -1,10 +1,15 @@
 from utils.errors.amenity import AmenityNotFound
 from utils.errors.place import PlaceNotFound, UnauthorizedAction
-from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
+from utils.errors.review import (
+    DuplicateReview,
+    OwnerCannotReviewOwnPlace,
+    ReviewNotFound,
+)
 from utils.errors.user import (
     EmailAlreadyRegistered,
     InvalidCredentials,
     PasswordRequired,
+    RestrictedUserFieldUpdate,
     UserNotFound,
 )
 
@@ -53,9 +58,11 @@ def register_error_handlers(api):
         handle_email_already_registered
     )
     api.errorhandler(InvalidCredentials)(handle_invalid_credentials)
+    api.errorhandler(DuplicateReview)(handle_invalid_request)
     api.errorhandler(OwnerCannotReviewOwnPlace)(
         handle_invalid_request
     )
     api.errorhandler(PasswordRequired)(handle_invalid_request)
+    api.errorhandler(RestrictedUserFieldUpdate)(handle_invalid_request)
     api.errorhandler(UnauthorizedAction)(handle_forbidden)
     api.errorhandler(ValueError)(handle_invalid_request)

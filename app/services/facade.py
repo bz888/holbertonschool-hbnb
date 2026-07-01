@@ -1,10 +1,15 @@
 from utils.errors.amenity import AmenityNotFound
 from utils.errors.place import PlaceNotFound, UnauthorizedAction
-from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
+from utils.errors.review import (
+    DuplicateReview,
+    OwnerCannotReviewOwnPlace,
+    ReviewNotFound,
+)
 from utils.errors.user import (
     EmailAlreadyRegistered,
     InvalidCredentials,
     PasswordRequired,
+    RestrictedUserFieldUpdate,
     UserNotFound,
 )
 from models.amenity import Amenity
@@ -18,7 +23,7 @@ from validators.fields import validate_allowed_fields
 
 ALLOWED_REVIEW_UPDATE_FIELDS = {"text", "rating"}
 ALLOWED_LOGIN_FIELDS = {"email", "password"}
-ALLOWED_USER_UPDATE_FIELDS = {"first_name", "last_name", "email"}
+ALLOWED_USER_UPDATE_FIELDS = {"first_name", "last_name"}
 ALLOWED_AMENITY_UPDATE_FIELDS = {"name"}
 ALLOWED_PLACE_UPDATE_FIELDS = {
     "title",
@@ -94,30 +99,23 @@ class HBnBFacade:
             # is_active=True, future feature
         )
 
-    def update_user(self, user_id, user_data) -> User:
+    def update_user(self, user_id, user_data, current_user_id) -> User:
         """Update and return a user."""
         user = self.user_repo.get(user_id)
         if user is None:
             raise UserNotFound(user_id)
+
+        if user.id != current_user_id:
+            raise UnauthorizedAction()
+
+        if {"email", "password"} & set(user_data):
+            raise RestrictedUserFieldUpdate()
 
         validate_allowed_fields(
             user_data,
             ALLOWED_USER_UPDATE_FIELDS,
             resource_name="user",
         )
-
-        if "email" in user_data:
-            email = User.normalize_email(user_data["email"])
-            existing_user = self.user_repo.find_one(
-                email=email,
-                # is_active=True,
-            )
-
-            if existing_user and existing_user.id != user.id:
-                raise EmailAlreadyRegistered(email)
-
-            user_data = user_data.copy()
-            user_data["email"] = email
 
         updated_user = self.user_repo.update(user_id, user_data)
 
@@ -294,6 +292,9 @@ class HBnBFacade:
         if user.id == place.owner.id:
             raise OwnerCannotReviewOwnPlace()
 
+        if self.review_repo.find_one(place=place, user=user):
+            raise DuplicateReview()
+
         data.pop("place_id")
         data.pop("user_id")
         review = Review(place=place, user=user, **data)
@@ -325,12 +326,15 @@ class HBnBFacade:
 
         return self.review_repo.find_all(user=user)
 
-    def update_review(self, review_id, review_data):
+    def update_review(self, review_id, review_data, current_user_id):
         data = review_data.copy()
 
         review = self.review_repo.get(review_id)
         if review is None:
             raise ReviewNotFound(review_id)
+
+        if review.user.id != current_user_id:
+            raise UnauthorizedAction()
 
         validate_allowed_fields(
             data,
@@ -344,10 +348,15 @@ class HBnBFacade:
 
         return updated_review
 
-    def delete_review(self, review_id):
-        review = self.review_repo.delete(review_id)
+    def delete_review(self, review_id, current_user_id):
+        review = self.review_repo.get(review_id)
         if review is None:
             raise ReviewNotFound(review_id)
+
+        if review.user.id != current_user_id:
+            raise UnauthorizedAction()
+
+        self.review_repo.delete(review_id)
 
         if review in review.place.reviews:
             review.place.reviews.remove(review)

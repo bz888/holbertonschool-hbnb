@@ -14,11 +14,16 @@ from api.errors import (
 )
 from utils.errors.amenity import AmenityNotFound
 from utils.errors.place import PlaceNotFound, UnauthorizedAction
-from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
+from utils.errors.review import (
+    DuplicateReview,
+    OwnerCannotReviewOwnPlace,
+    ReviewNotFound,
+)
 from utils.errors.user import (
     EmailAlreadyRegistered,
     InvalidCredentials,
     PasswordRequired,
+    RestrictedUserFieldUpdate,
     UserNotFound,
 )
 
@@ -51,6 +56,8 @@ class TestApiErrorHandlers(unittest.TestCase):
                 EmailAlreadyRegistered,
                 InvalidCredentials,
                 PasswordRequired,
+                RestrictedUserFieldUpdate,
+                DuplicateReview,
                 OwnerCannotReviewOwnPlace,
                 UnauthorizedAction,
                 ValueError,
@@ -87,7 +94,23 @@ class TestApiErrorHandlers(unittest.TestCase):
 
         self.assertEqual(
             body,
-            {"error": "Owners cannot review their own place"},
+            {"error": "You cannot review your own place."},
+        )
+        self.assertEqual(status, 400)
+
+        body, status = handle_invalid_request(DuplicateReview())
+
+        self.assertEqual(
+            body,
+            {"error": "You have already reviewed this place."},
+        )
+        self.assertEqual(status, 400)
+
+        body, status = handle_invalid_request(RestrictedUserFieldUpdate())
+
+        self.assertEqual(
+            body,
+            {"error": "You cannot modify email or password."},
         )
         self.assertEqual(status, 400)
 

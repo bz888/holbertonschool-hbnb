@@ -9,4 +9,11 @@ class OwnerCannotReviewOwnPlace(Exception):
     """Raised when a place owner attempts to review their own place."""
 
     def __init__(self):
-        super().__init__("Owners cannot review their own place")
+        super().__init__("You cannot review your own place.")
+
+
+class DuplicateReview(Exception):
+    """Raised when a user attempts to review the same place twice."""
+
+    def __init__(self):
+        super().__init__("You have already reviewed this place.")
