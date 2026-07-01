@@ -1,9 +1,16 @@
-from flask_jwt_extended import create_access_token, jwt_required
-from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt,
+    get_jwt_identity,
+    jwt_required,
+)
+from flask_restx import Namespace, Resource
 
 from api.v1.schemas.auth import (
     loginModel,
-    loginResponseModel
+    jwtErrorModel,
+    loginResponseModel,
+    protectedResponseModel,
 )
 from services import facade
 
@@ -13,7 +20,15 @@ api = Namespace("auth", description="Authentication operations")
 login_model = api.model("Login", loginModel)
 login_response_model = api.model(
     "LoginResponse",
-    loginResponseModel
+    loginResponseModel,
+)
+protected_response_model = api.model(
+    "ProtectedResponse",
+    protectedResponseModel,
+)
+jwt_error_model = api.model(
+    "JwtError",
+    jwtErrorModel,
 )
 
 @api.route("/login")
@@ -36,3 +51,22 @@ class Login(Resource):
         )
 
         return {"access_token": access_token}, 200
+
+
+@api.route("/protected")
+class ProtectedResource(Resource):
+    @api.response(
+        200,
+        "Protected route accessed successfully",
+        protected_response_model,
+    )
+    @api.response(401, "Missing or invalid JWT", jwt_error_model)
+    @api.response(422, "Invalid JWT payload", jwt_error_model)
+    @jwt_required()
+    def get(self):
+        current_user = get_jwt_identity()
+        claims = get_jwt()
+        return {
+            "message": f"Hello, user {current_user}",
+            "is_admin": claims["is_admin"],
+        }, 200
