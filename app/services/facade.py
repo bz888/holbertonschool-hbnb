@@ -1,7 +1,11 @@
 from utils.errors.amenity import AmenityNotFound
 from utils.errors.place import PlaceNotFound
 from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
-from utils.errors.user import EmailAlreadyRegistered, UserNotFound
+from utils.errors.user import (
+    EmailAlreadyRegistered,
+    PasswordRequired,
+    UserNotFound,
+)
 from models.amenity import Amenity
 from models.place import Place
 from models.review import Review
@@ -44,8 +48,13 @@ class HBnBFacade:
         if existing_user:
             raise EmailAlreadyRegistered(email)
 
+        password = data.pop("password", None)
+        if password is None:
+            raise PasswordRequired()
+
         data["email"] = email
         user = User(**data)
+        user.hash_password(password)
         return self.user_repo.add(user)
 
     def get_user(self, user_id):

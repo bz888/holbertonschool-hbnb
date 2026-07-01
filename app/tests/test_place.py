@@ -24,6 +24,7 @@ class TestPlace(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
         amenities = [
@@ -289,6 +290,7 @@ class TestPlace(unittest.TestCase):
                 "first_name": "Grace",
                 "last_name": "Hopper",
                 "email": "grace@example.com",
+                "password": "test-password",
             }
         )
 

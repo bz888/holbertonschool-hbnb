@@ -6,7 +6,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from models.user import User
 from services.facade import HBnBFacade
-from utils.errors.user import EmailAlreadyRegistered, UserNotFound
+from utils.errors.user import (
+    EmailAlreadyRegistered,
+    PasswordRequired,
+    UserNotFound,
+)
 
 
 class TestUser(unittest.TestCase):
@@ -23,6 +27,7 @@ class TestUser(unittest.TestCase):
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
+                "password": "test-password",
             }
         )
         return facade, user
@@ -154,6 +159,7 @@ class TestUser(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
 
@@ -170,6 +176,23 @@ class TestUser(unittest.TestCase):
             )
 
         self.assertFalse(user.is_admin)
+
+    def test_facade_create_user_requires_password(self):
+        facade = HBnBFacade()
+
+        with self.assertRaisesRegex(
+            PasswordRequired,
+            "Password is required",
+        ):
+            facade.create_user(
+                {
+                    "first_name": "Ada",
+                    "last_name": "Lovelace",
+                    "email": "ada@example.com",
+                }
+            )
+
+        self.assertEqual(facade.get_all_users(), [])
 
     def test_add_place(self):
         user = User("Ada", "Lovelace", "ada@example.com")
@@ -194,6 +217,7 @@ class TestUser(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
 
@@ -203,6 +227,7 @@ class TestUser(unittest.TestCase):
                     "first_name": "Grace",
                     "last_name": "Hopper",
                     "email": "ada@example.com",
+                    "password": "test-password",
                 }
             )
 
@@ -213,6 +238,7 @@ class TestUser(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
 
@@ -222,6 +248,7 @@ class TestUser(unittest.TestCase):
                     "first_name": "Grace",
                     "last_name": "Hopper",
                     "email": "  ADA@EXAMPLE.COM  ",
+                    "password": "test-password",
                 }
             )
 
@@ -292,6 +319,7 @@ class TestUser(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
 
@@ -309,6 +337,7 @@ class TestUser(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
 

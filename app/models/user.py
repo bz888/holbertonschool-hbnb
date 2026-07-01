@@ -1,5 +1,6 @@
 import re
 
+from extensions import bcrypt
 from .base_model import BaseModel
 
 
@@ -15,6 +16,7 @@ class User(BaseModel):
         first_name,
         last_name,
         email,
+        password=None,
         is_admin=False,
         is_active=True,
     ):
@@ -22,6 +24,7 @@ class User(BaseModel):
         self.first_name = first_name
         self.last_name = last_name
         self.email = email
+        self.password = password
         self.is_admin = is_admin
         self.is_active = is_active
         self.places = []
@@ -91,6 +94,14 @@ class User(BaseModel):
     def add_review(self, review):
         """Add a review written by the user."""
         self.reviews.append(review)
+
+    def hash_password(self, password):
+        """Hashes the password before storing it."""
+        self.password = bcrypt.generate_password_hash(password).decode("utf-8")
+
+    def verify_password(self, password):
+        """Verifies if the provided password matches the hashed password."""
+        return bcrypt.check_password_hash(self.password, password)
 
     def to_dict(self):
         return {

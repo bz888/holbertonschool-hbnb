@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from api.errors import (
     handle_email_already_registered,
+    handle_invalid_credentials,
     handle_invalid_request,
     handle_not_found,
     register_error_handlers,
@@ -13,7 +14,12 @@ from api.errors import (
 from utils.errors.amenity import AmenityNotFound
 from utils.errors.place import PlaceNotFound
 from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
-from utils.errors.user import EmailAlreadyRegistered, UserNotFound
+from utils.errors.user import (
+    EmailAlreadyRegistered,
+    InvalidCredentials,
+    PasswordRequired,
+    UserNotFound,
+)
 
 
 class FakeApi:
@@ -42,6 +48,8 @@ class TestApiErrorHandlers(unittest.TestCase):
                 ReviewNotFound,
                 UserNotFound,
                 EmailAlreadyRegistered,
+                InvalidCredentials,
+                PasswordRequired,
                 OwnerCannotReviewOwnPlace,
                 ValueError,
             },
@@ -63,6 +71,12 @@ class TestApiErrorHandlers(unittest.TestCase):
             {"error": "Email 'ada@example.com' is already registered"},
         )
         self.assertEqual(status, 400)
+
+    def test_invalid_credentials_handler_returns_401(self):
+        body, status = handle_invalid_credentials(InvalidCredentials())
+
+        self.assertEqual(body, {"error": "Invalid credentials"})
+        self.assertEqual(status, 401)
 
     def test_invalid_request_handler_returns_400(self):
         body, status = handle_invalid_request(

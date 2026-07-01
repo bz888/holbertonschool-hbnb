@@ -44,6 +44,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "first_name": first_name,
                 "last_name": last_name,
                 "email": email,
+                "password": "test-password",
             },
         )
         self.assertEqual(response.status_code, 201)
@@ -227,6 +228,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             "first_name": "Ada",
             "last_name": "Lovelace",
             "email": "ada@example.com",
+            "password": "test-password",
         }
         user_response = self.client.post(
             "/api/v1/users/",
@@ -287,6 +289,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "correct horse battery staple",
             },
         )
         user_id = created_response.get_json()["id"]
@@ -306,11 +309,17 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             "email",
         }
 
-        for response in (
-            created_response,
-            retrieved_response,
-            updated_response,
-        ):
+        self.assertEqual(created_response.status_code, 201)
+        self.assertEqual(
+            set(created_response.get_json()),
+            {"id", "message"},
+        )
+        self.assertEqual(
+            created_response.get_json()["message"],
+            "User successfully created",
+        )
+
+        for response in (retrieved_response, updated_response):
             self.assertEqual(
                 set(response.get_json()),
                 expected_keys,
@@ -328,10 +337,57 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         )
 
         user = facade.get_user(user_id)
+        self.assertNotEqual(
+            user.password,
+            "correct horse battery staple",
+        )
+        with self.app.app_context():
+            self.assertTrue(
+                user.verify_password(
+                    "correct horse battery staple",
+                )
+            )
         self.assertIn("is_admin", user.to_dict())
         self.assertIn("is_active", user.to_dict())
         self.assertIn("created_at", user.to_dict())
         self.assertIn("updated_at", user.to_dict())
+
+    def test_user_registration_hashes_password_and_hides_it(self):
+        plain_password = "correct horse battery staple"
+        created_response = self.client.post(
+            "/api/v1/users/",
+            json={
+                "first_name": "Password",
+                "last_name": "Check",
+                "email": "password-check@example.com",
+                "password": plain_password,
+            },
+        )
+        created_body = created_response.get_json()
+
+        self.assertEqual(created_response.status_code, 201)
+        self.assertEqual(
+            set(created_body),
+            {"id", "message"},
+        )
+        self.assertNotIn("password", created_body)
+
+        user = facade.get_user(created_body["id"])
+        self.assertNotEqual(user.password, plain_password)
+        with self.app.app_context():
+            self.assertTrue(user.verify_password(plain_password))
+
+        retrieved_response = self.client.get(
+            f"/api/v1/users/{created_body['id']}"
+        )
+        retrieved_body = retrieved_response.get_json()
+
+        self.assertEqual(retrieved_response.status_code, 200)
+        self.assertNotIn("password", retrieved_body)
+        self.assertEqual(
+            set(retrieved_body),
+            {"id", "first_name", "last_name", "email"},
+        )
 
     def test_amenity_and_review_responses_exclude_timestamps(self):
         owner = self._create_user()
@@ -453,6 +509,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "first_name": "Hard",
                 "last_name": "Delete",
                 "email": "hard@example.com",
+                "password": "test-password",
             },
         )
         hard_user_id = hard_user_response.get_json()["id"]

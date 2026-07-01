@@ -18,6 +18,10 @@ user_model = api.model(
             required=True,
             description="Email of the user",
         ),
+        "password": fields.String(
+            required=True,
+            description="Password of the user",
+        ),
     },
 )
 
@@ -55,6 +59,14 @@ user_response_model = api.model(
     },
 )
 
+user_created_response_model = api.model(
+    "UserCreatedResponse",
+    {
+        "id": fields.String(description="ID of the user"),
+        "message": fields.String(description="Success message"),
+    },
+)
+
 user_review_response_model = api.model(
     "UserReviewResponse",
     {
@@ -83,7 +95,7 @@ class UserList(Resource):
         """List all users."""
         return facade.get_all_users(), 200
 
-    @api.marshal_with(user_response_model)
+    @api.marshal_with(user_created_response_model)
     @api.expect(user_model, validate=True)
     @api.response(201, "User successfully created")
     @api.response(400, "Invalid input data")
@@ -91,7 +103,10 @@ class UserList(Resource):
     def post(self):
         """Register a new user."""
         new_user = facade.create_user(api.payload)
-        return new_user, 201
+        return {
+            "id": new_user.id,
+            "message": "User successfully created",
+        }, 201
 
 
 @api.route("/<user_id>")

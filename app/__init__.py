@@ -1,16 +1,20 @@
 from flask import Flask
 from flask_restx import Api
+
+import config
+from extensions import bcrypt
+
 from api.errors import register_error_handlers
 from api.v1.amenities import api as amenities_ns
 from api.v1.places import api as places_ns
 from api.v1.reviews import api as reviews_ns
 from api.v1.users import api as users_ns
-from config import config
 
 
-def create_app(config_name='default'):
+def create_app(config_class=config.DevelopmentConfig):
     app = Flask(__name__)
-    app.config.from_object(config[config_name])
+    app.config.from_object(config_class)
+    bcrypt.init_app(app)
 
     api = Api(app, version='1.0', title='HBnB API', description='HBnB Application API', doc='/api/v1/')
     register_error_handlers(api)

@@ -197,6 +197,7 @@ class TestReview(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
         place = facade.create_place(
@@ -227,6 +228,7 @@ class TestReview(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
         reviewer = facade.create_user(
@@ -234,6 +236,7 @@ class TestReview(unittest.TestCase):
                 "first_name": "Grace",
                 "last_name": "Hopper",
                 "email": "grace@example.com",
+                "password": "test-password",
             }
         )
         place = facade.create_place(
@@ -266,6 +269,7 @@ class TestReview(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
         place = facade.create_place(
@@ -358,6 +362,7 @@ class TestReview(unittest.TestCase):
                 "first_name": "Ada",
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
+                "password": "test-password",
             }
         )
         reviewer = facade.create_user(
@@ -365,6 +370,7 @@ class TestReview(unittest.TestCase):
                 "first_name": "Grace",
                 "last_name": "Hopper",
                 "email": "grace@example.com",
+                "password": "test-password",
             }
         )
         place = facade.create_place(
