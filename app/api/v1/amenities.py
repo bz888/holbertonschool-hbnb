@@ -1,20 +1,16 @@
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource
+from api.v1.schemas.amenity import (
+    amenityRequestModel,
+    amenityResponseModel,
+    amenityUpdateModel,
+)
 from services import facade
 
 api = Namespace('amenities', description='Amenity operations')
 
-amenity_model = api.model('Amenity', {
-    'name': fields.String(required=True, description='Name of the amenity')
-})
-
-amenity_update_model = api.model('AmenityUpdate', {
-    'name': fields.String(required=False, description='Name of the amenity')
-})
-
-amenity_response_model = api.model('AmenityResponse', {
-    'id': fields.String(description='ID of the amenity'),
-    'name': fields.String(description='Name of the amenity')
-})
+amenity_model = api.model('Amenity', amenityRequestModel)
+amenity_update_model = api.model('AmenityUpdate', amenityUpdateModel)
+amenity_response_model = api.model('AmenityResponse', amenityResponseModel)
 
 
 @api.route('/')

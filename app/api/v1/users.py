@@ -1,87 +1,25 @@
-from flask_restx import Namespace, Resource, fields
+from flask_restx import Namespace, Resource
+from api.v1.schemas.user import (
+    userCreatedResponseModel,
+    userRequestModel,
+    userResponseModel,
+    userReviewResponseModel,
+    userUpdateModel,
+)
 from services import facade
 
 api = Namespace("users", description="User operations")
 
-user_model = api.model(
-    "User",
-    {
-        "first_name": fields.String(
-            required=True,
-            description="First name of the user",
-        ),
-        "last_name": fields.String(
-            required=True,
-            description="Last name of the user",
-        ),
-        "email": fields.String(
-            required=True,
-            description="Email of the user",
-        ),
-        "password": fields.String(
-            required=True,
-            description="Password of the user",
-        ),
-    },
-)
-
-user_update_model = api.model(
-    "UserUpdate",
-    {
-        "first_name": fields.String(
-            required=False,
-            description="First name of the user",
-        ),
-        "last_name": fields.String(
-            required=False,
-            description="Last name of the user",
-        ),
-        "email": fields.String(
-            required=False,
-            description="Email of the user",
-        ),
-    },
-)
-
-user_response_model = api.model(
-    "UserResponse",
-    {
-        "id": fields.String(description="ID of the user"),
-        "first_name": fields.String(
-            description="First name of the user",
-        ),
-        "last_name": fields.String(
-            description="Last name of the user",
-        ),
-        "email": fields.String(
-            description="Email of the user",
-        ),
-    },
-)
-
+user_model = api.model("User", userRequestModel)
+user_update_model = api.model("UserUpdate", userUpdateModel)
+user_response_model = api.model("UserResponse", userResponseModel)
 user_created_response_model = api.model(
     "UserCreatedResponse",
-    {
-        "id": fields.String(description="ID of the user"),
-        "message": fields.String(description="Success message"),
-    },
+    userCreatedResponseModel,
 )
-
 user_review_response_model = api.model(
     "UserReviewResponse",
-    {
-        "id": fields.String(description="ID of the review"),
-        "text": fields.String(description="Review text"),
-        "rating": fields.Integer(description="Rating from 1 to 5"),
-        "place_id": fields.String(
-            attribute=lambda review: review.place.id,
-            description="ID of the reviewed place",
-        ),
-        "user_id": fields.String(
-            attribute=lambda review: review.user.id,
-            description="ID of the review author",
-        ),
-    },
+    userReviewResponseModel,
 )
 
 

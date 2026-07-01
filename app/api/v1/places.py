@@ -1,130 +1,48 @@
 from flask_restx import Namespace, Resource, fields
+from api.v1.schemas.place import (
+    placeAmenityResponseModel,
+    placeOwnerResponseModel,
+    placeRequestModel,
+    placeResponseModel,
+    placeReviewRequestModel,
+    placeReviewResponseModel,
+    placeUpdateModel,
+)
 from services import facade
 
 api = Namespace("places", description="Place operations")
 
-place_model = api.model(
-    "Place",
-    {
-        "title": fields.String(
-            required=True, description="Title of the place"
-        ),
-        "description": fields.String(
-            required=False, description="Description of the place"
-        ),
-        "price": fields.Float(required=True, description="Price per night"),
-        "latitude": fields.Float(
-            required=True, description="Latitude of the place"
-        ),
-        "longitude": fields.Float(
-            required=True, description="Longitude of the place"
-        ),
-        "owner_id": fields.String(
-            required=True, description="ID of the owner"
-        ),
-        "amenity_ids": fields.List(
-            fields.String, required=False, description="Amenity IDs"
-        ),
-    },
-)
-
-place_update_model = api.model(
-    "PlaceUpdate",
-    {
-        "title": fields.String(
-            required=False, description="Title of the place"
-        ),
-        "description": fields.String(
-            required=False, description="Description of the place"
-        ),
-        "price": fields.Float(required=False, description="Price per night"),
-        "latitude": fields.Float(
-            required=False, description="Latitude of the place"
-        ),
-        "longitude": fields.Float(
-            required=False, description="Longitude of the place"
-        ),
-        "owner_id": fields.String(
-            required=False, description="ID of the owner"
-        ),
-        "amenity_ids": fields.List(
-            fields.String, required=False, description="Amenity IDs"
-        ),
-    },
-)
-
+place_model = api.model("Place", placeRequestModel)
+place_update_model = api.model("PlaceUpdate", placeUpdateModel)
 place_owner_response_model = api.model(
     "PlaceOwnerResponse",
-    {
-        "id": fields.String(description="ID of the owner"),
-        "first_name": fields.String(description="First name of the owner"),
-        "last_name": fields.String(description="Last name of the owner"),
-        "email": fields.String(description="Email of the owner"),
-    },
+    placeOwnerResponseModel,
 )
-
 place_amenity_response_model = api.model(
     "PlaceAmenityResponse",
-    {
-        "id": fields.String(description="Amenity ID"),
-        "name": fields.String(description="Name of the amenity"),
-    },
+    placeAmenityResponseModel,
 )
-
 place_review_response_model = api.model(
     "PlaceReviewResponse",
-    {
-        "id": fields.String(description="Review ID"),
-        "text": fields.String(description="Review text"),
-        "rating": fields.Integer(description="Rating from 1 to 5"),
-        "place_id": fields.String(
-            attribute=lambda review: review.place.id,
-            description="ID of the reviewed place",
-        ),
-        "user_id": fields.String(
-            attribute=lambda review: review.user.id,
-            description="ID of the review author",
-        ),
-    },
+    placeReviewResponseModel,
 )
-
-place_response_model = api.model(
-    "PlaceResponse",
-    {
-        "id": fields.String(description="Place ID"),
-        "title": fields.String(description="Title of the place"),
-        "description": fields.String(description="Description of the place"),
-        "price": fields.Float(description="Price per night"),
-        "latitude": fields.Float(description="Latitude of the place"),
-        "longitude": fields.Float(description="Longitude of the place"),
-        "owner_id": fields.String(
-            attribute=lambda place: place.owner.id,
-            description="ID of the owner",
-        ),
-        "owner": fields.Nested(
-            place_owner_response_model, description="Owner details"
-        ),
-        "amenities": fields.List(
-            fields.Nested(place_amenity_response_model),
-            description="Amenities associated with the place",
-        ),
-        "reviews": fields.List(
-            fields.Nested(place_review_response_model),
-            description="Reviews associated with the place",
-        ),
-    },
-)
-
-review_for_place_model = api.model(
-    "PlaceReview",
-    {
-        "text": fields.String(required=True, description="Review text"),
-        "rating": fields.Integer(
-            required=True, description="Rating from 1 to 5"
-        ),
-        "user_id": fields.String(required=True, description="ID of the user"),
-    },
-)
+place_response_schema = {
+    **placeResponseModel,
+    "owner": fields.Nested(
+        place_owner_response_model,
+        description="Owner details",
+    ),
+    "amenities": fields.List(
+        fields.Nested(place_amenity_response_model),
+        description="Amenities associated with the place",
+    ),
+    "reviews": fields.List(
+        fields.Nested(place_review_response_model),
+        description="Reviews associated with the place",
+    ),
+}
+place_response_model = api.model("PlaceResponse", place_response_schema)
+review_for_place_model = api.model("PlaceReview", placeReviewRequestModel)
 
 
 @api.route("/")
