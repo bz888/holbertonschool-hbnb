@@ -10,7 +10,6 @@ reviewRequestModel = {
         required=True,
         description="ID of the place",
     ),
-    "user_id": fields.String(required=True, description="ID of the user"),
 }
 
 reviewUpdateModel = {

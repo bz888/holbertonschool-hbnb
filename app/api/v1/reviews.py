@@ -1,3 +1,4 @@
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource
 from api.v1.schemas.review import (
     reviewRequestModel,
@@ -24,10 +25,14 @@ class ReviewList(Resource):
     @api.expect(review_model, validate=True)
     @api.response(201, "Review successfully created")
     @api.response(400, "Invalid input data")
+    @api.response(401, "Missing or invalid JWT")
     @api.response(404, "User or place not found")
+    @jwt_required()
     def post(self):
         """Create a new review"""
-        review = facade.create_review(api.payload)
+        review_data = api.payload.copy()
+        review_data["user_id"] = get_jwt_identity()
+        review = facade.create_review(review_data)
         return review, 201
 
 
@@ -44,15 +49,21 @@ class ReviewResource(Resource):
     @api.expect(review_update_model, validate=True)
     @api.response(200, "Review successfully updated")
     @api.response(400, "Invalid input data")
+    @api.response(401, "Missing or invalid JWT")
     @api.response(404, "Review not found")
+    @jwt_required()
     def put(self, review_id):
         """Update review details by ID"""
+        get_jwt_identity()
         facade.update_review(review_id, api.payload)
         return {"message": "Review updated successfully"}, 200
 
     @api.response(200, "Review successfully deleted")
+    @api.response(401, "Missing or invalid JWT")
     @api.response(404, "Review not found")
+    @jwt_required()
     def delete(self, review_id):
         """Delete review by ID"""
+        get_jwt_identity()
         facade.delete_review(review_id)
         return {"message": "Review deleted successfully"}, 200

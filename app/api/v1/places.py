@@ -1,3 +1,4 @@
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
 from api.v1.schemas.place import (
     placeAmenityResponseModel,
@@ -57,10 +58,14 @@ class PlaceList(Resource):
     @api.expect(place_model, validate=True)
     @api.response(201, "Place successfully created")
     @api.response(400, "Invalid input data")
+    @api.response(401, "Missing or invalid JWT")
     @api.response(404, "User not found")
+    @jwt_required()
     def post(self):
         """Create a new place"""
-        place = facade.create_place(api.payload)
+        place_data = api.payload.copy()
+        place_data["owner_id"] = get_jwt_identity()
+        place = facade.create_place(place_data)
         return place, 201
 
 
@@ -77,9 +82,12 @@ class PlaceResource(Resource):
     @api.expect(place_update_model, validate=True)
     @api.response(200, "Place successfully updated")
     @api.response(400, "Invalid input data")
+    @api.response(401, "Missing or invalid JWT")
     @api.response(404, "Place not found")
+    @jwt_required()
     def put(self, place_id):
         """Update place details by ID"""
+        get_jwt_identity()
         facade.update_place(place_id, api.payload)
         return {"message": "Place updated successfully"}, 200
 
@@ -104,11 +112,14 @@ class PlaceReviewList(Resource):
     @api.expect(review_for_place_model, validate=True)
     @api.response(201, "Review successfully created")
     @api.response(400, "Invalid input data")
+    @api.response(401, "Missing or invalid JWT")
     @api.response(404, "Place not found")
+    @jwt_required()
     def post(self, place_id):
         """Create a review for a place"""
         review_data = api.payload.copy()
         review_data["place_id"] = place_id
+        review_data["user_id"] = get_jwt_identity()
 
         review = facade.create_review(review_data)
         return review, 201

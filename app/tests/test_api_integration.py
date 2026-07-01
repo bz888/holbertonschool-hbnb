@@ -5,12 +5,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 try:
+    from flask_jwt_extended import create_access_token
+
     from __init__ import create_app
     from services import facade
 except ModuleNotFoundError as error:
-    if error.name not in {"flask", "flask_restx"}:
+    if error.name not in {
+        "flask",
+        "flask_jwt_extended",
+        "flask_restx",
+    }:
         raise
     create_app = None
+    create_access_token = None
     facade = None
 
 
@@ -30,7 +37,19 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
 
         self.app = create_app()
         self.app.config["TESTING"] = True
+        self.app.config["JWT_SECRET_KEY"] = (
+            "test-secret-key-with-at-least-32-characters"
+        )
         self.client = self.app.test_client()
+
+    def _auth_headers(self, user_id, is_admin=False):
+        with self.app.app_context():
+            token = create_access_token(
+                identity=user_id,
+                additional_claims={"is_admin": is_admin},
+            )
+
+        return {"Authorization": f"Bearer {token}"}
 
     def _create_user(
         self,
@@ -65,7 +84,6 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             "price": 100,
             "latitude": 0,
             "longitude": 0,
-            "owner_id": owner_id,
         }
         if amenity_ids is not None:
             place_data["amenity_ids"] = amenity_ids
@@ -73,6 +91,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         response = self.client.post(
             "/api/v1/places/",
             json=place_data,
+            headers=self._auth_headers(owner_id),
         )
         self.assertEqual(response.status_code, 201)
         return response.get_json()
@@ -84,8 +103,8 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "text": "Great stay",
                 "rating": 5,
                 "place_id": place_id,
-                "user_id": user_id,
             },
+            headers=self._auth_headers(user_id),
         )
         self.assertEqual(response.status_code, 201)
         return response.get_json()
@@ -158,6 +177,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.put(
                     "/api/v1/users/missing",
                     json={"email": "new@example.com"},
+                    headers=self._auth_headers(reviewer["id"]),
                 ),
                 {"error": "User 'missing' not found"},
             ),
@@ -184,6 +204,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.put(
                     "/api/v1/places/missing",
                     json={"title": "Beach house"},
+                    headers=self._auth_headers(reviewer["id"]),
                 ),
                 {"error": "Place 'missing' not found"},
             ),
@@ -201,8 +222,8 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                     json={
                         "text": "Great stay",
                         "rating": 5,
-                        "user_id": reviewer["id"],
                     },
+                    headers=self._auth_headers(reviewer["id"]),
                 ),
                 {"error": "Place 'missing' not found"},
             ),
@@ -210,11 +231,15 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.put(
                     "/api/v1/reviews/missing",
                     json={"rating": 4},
+                    headers=self._auth_headers(reviewer["id"]),
                 ),
                 {"error": "Review 'missing' not found"},
             ),
             (
-                self.client.delete("/api/v1/reviews/missing"),
+                self.client.delete(
+                    "/api/v1/reviews/missing",
+                    headers=self._auth_headers(reviewer["id"]),
+                ),
                 {"error": "Review 'missing' not found"},
             ),
         )
@@ -259,8 +284,8 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "price": 100,
                 "latitude": 0,
                 "longitude": 0,
-                "owner_id": owner_id,
             },
+            headers=self._auth_headers(owner_id),
         )
         self.assertEqual(place_response.status_code, 201)
 
@@ -272,14 +297,131 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             json={
                 "text": "My own place",
                 "rating": 5,
-                "user_id": owner_id,
             },
+            headers=self._auth_headers(owner_id),
         )
 
         self.assertEqual(review_response.status_code, 400)
         self.assertEqual(
             review_response.get_json(),
             {"error": "Owners cannot review their own place"},
+        )
+
+    def test_jwt_protected_write_routes_require_token(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        place = self._create_place(owner["id"])
+        review = self._create_review(place["id"], reviewer["id"])
+
+        checks = (
+            self.client.post(
+                "/api/v1/places/",
+                json={
+                    "title": "New flat",
+                    "price": 100,
+                    "latitude": 0,
+                    "longitude": 0,
+                },
+            ),
+            self.client.put(
+                f"/api/v1/places/{place['id']}",
+                json={"title": "Updated flat"},
+            ),
+            self.client.post(
+                "/api/v1/reviews/",
+                json={
+                    "text": "Great stay",
+                    "rating": 5,
+                    "place_id": place["id"],
+                },
+            ),
+            self.client.post(
+                f"/api/v1/places/{place['id']}/reviews",
+                json={
+                    "text": "Great stay",
+                    "rating": 5,
+                },
+            ),
+            self.client.put(
+                f"/api/v1/reviews/{review['id']}",
+                json={"rating": 4},
+            ),
+            self.client.delete(f"/api/v1/reviews/{review['id']}"),
+            self.client.put(
+                f"/api/v1/users/{owner['id']}",
+                json={"first_name": "Updated"},
+            ),
+        )
+
+        for response in checks:
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(
+                response.get_json(),
+                {"msg": "Missing Authorization Header"},
+            )
+
+    def test_place_get_routes_remain_public(self):
+        owner = self._create_user()
+        place = self._create_place(owner["id"])
+
+        list_response = self.client.get("/api/v1/places/")
+        detail_response = self.client.get(
+            f"/api/v1/places/{place['id']}"
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertEqual(list_response.get_json()[0]["id"], place["id"])
+        self.assertEqual(detail_response.get_json()["id"], place["id"])
+
+    def test_create_routes_use_jwt_identity_for_relationships(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        spoofed_user = self._create_user(
+            first_name="Spoofed",
+            last_name="User",
+            email="spoofed@example.com",
+        )
+
+        place_response = self.client.post(
+            "/api/v1/places/",
+            json={
+                "title": "Flat",
+                "description": "Nice flat",
+                "price": 100,
+                "latitude": 0,
+                "longitude": 0,
+                "owner_id": spoofed_user["id"],
+            },
+            headers=self._auth_headers(owner["id"]),
+        )
+        place = place_response.get_json()
+
+        review_response = self.client.post(
+            "/api/v1/reviews/",
+            json={
+                "text": "Great stay",
+                "rating": 5,
+                "place_id": place["id"],
+                "user_id": spoofed_user["id"],
+            },
+            headers=self._auth_headers(reviewer["id"]),
+        )
+
+        self.assertEqual(place_response.status_code, 201)
+        self.assertEqual(place["owner_id"], owner["id"])
+        self.assertEqual(review_response.status_code, 201)
+        self.assertEqual(
+            review_response.get_json()["user_id"],
+            reviewer["id"],
         )
 
     def test_user_responses_exclude_internal_model_fields(self):
@@ -299,6 +441,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         updated_response = self.client.put(
             f"/api/v1/users/{user_id}",
             json={"first_name": "Augusta Ada"},
+            headers=self._auth_headers(user_id),
         )
         listed_response = self.client.get("/api/v1/users/")
 
@@ -426,6 +569,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         review_update_response = self.client.put(
             f"/api/v1/reviews/{review['id']}",
             json={"rating": 4},
+            headers=self._auth_headers(reviewer["id"]),
         )
         review_responses = (
             review,
@@ -464,6 +608,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         place_update_response = self.client.put(
             f"/api/v1/places/{place['id']}",
             json={"title": "Updated Flat"},
+            headers=self._auth_headers(owner["id"]),
         )
         self.assertEqual(place_update_response.status_code, 200)
         self.assertEqual(
@@ -543,6 +688,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 response = self.client.put(
                     f"/api/v1/reviews/{review['id']}",
                     json=payload,
+                    headers=self._auth_headers(reviewer["id"]),
                 )
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(
@@ -571,6 +717,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.put(
                     f"/api/v1/users/{owner['id']}",
                     json={"is_admin": True},
+                    headers=self._auth_headers(owner["id"]),
                 ),
                 {
                     "error": (
@@ -598,6 +745,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.put(
                     f"/api/v1/places/{place['id']}",
                     json={"owner_id": replacement_owner["id"]},
+                    headers=self._auth_headers(owner["id"]),
                 ),
                 {
                     "error": (
@@ -654,6 +802,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         response = self.client.put(
             f"/api/v1/places/{place['id']}",
             json={"title": "Beach house"},
+            headers=self._auth_headers(owner["id"]),
         )
 
         self.assertEqual(response.status_code, 200)
@@ -681,8 +830,8 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             json={
                 "text": "Great stay",
                 "rating": 5,
-                "user_id": reviewer["id"],
             },
+            headers=self._auth_headers(reviewer["id"]),
         )
 
         self.assertEqual(list_response.status_code, 200)
@@ -717,7 +866,8 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             f"/api/v1/amenities/{amenity['id']}"
         )
         review_response = self.client.delete(
-            f"/api/v1/reviews/{review['id']}"
+            f"/api/v1/reviews/{review['id']}",
+            headers=self._auth_headers(reviewer["id"]),
         )
 
         self.assertEqual(amenity_response.status_code, 200)

@@ -18,10 +18,6 @@ placeRequestModel = {
         required=True,
         description="Longitude of the place",
     ),
-    "owner_id": fields.String(
-        required=True,
-        description="ID of the owner",
-    ),
     "amenity_ids": fields.List(
         fields.String,
         required=False,
@@ -46,10 +42,6 @@ placeUpdateModel = {
     "longitude": fields.Float(
         required=False,
         description="Longitude of the place",
-    ),
-    "owner_id": fields.String(
-        required=False,
-        description="ID of the owner",
     ),
     "amenity_ids": fields.List(
         fields.String,
@@ -103,5 +95,4 @@ placeReviewRequestModel = {
         required=True,
         description="Rating from 1 to 5",
     ),
-    "user_id": fields.String(required=True, description="ID of the user"),
 }

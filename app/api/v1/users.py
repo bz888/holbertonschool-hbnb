@@ -1,3 +1,4 @@
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource
 from api.v1.schemas.user import (
     userCreatedResponseModel,
@@ -63,10 +64,13 @@ class UserResource(Resource):
     @api.expect(user_update_model, validate=True)
     @api.response(200, "User successfully updated")
     @api.response(400, "Invalid input data")
+    @api.response(401, "Missing or invalid JWT")
     @api.response(404, "User not found")
     @api.response(400, "Email already registered")
+    @jwt_required()
     def put(self, user_id):
         """Update user details by ID."""
+        get_jwt_identity()
         user = facade.update_user(user_id, api.payload)
         return user, 200
 
