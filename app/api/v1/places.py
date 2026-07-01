@@ -83,12 +83,17 @@ class PlaceResource(Resource):
     @api.response(200, "Place successfully updated")
     @api.response(400, "Invalid input data")
     @api.response(401, "Missing or invalid JWT")
+    @api.response(403, "Unauthorized action")
     @api.response(404, "Place not found")
     @jwt_required()
     def put(self, place_id):
         """Update place details by ID"""
-        get_jwt_identity()
-        facade.update_place(place_id, api.payload)
+        current_user_id = get_jwt_identity()
+        facade.update_place(
+            place_id,
+            api.payload,
+            current_user_id=current_user_id,
+        )
         return {"message": "Place updated successfully"}, 200
 
     @api.response(200, "Place successfully deleted")

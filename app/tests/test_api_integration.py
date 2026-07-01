@@ -815,6 +815,28 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             "Beach house",
         )
 
+    def test_place_update_by_non_owner_returns_forbidden(self):
+        owner = self._create_user()
+        other_user = self._create_user(
+            first_name="Other",
+            last_name="User",
+            email="other@example.com",
+        )
+        place = self._create_place(owner["id"])
+
+        response = self.client.put(
+            f"/api/v1/places/{place['id']}",
+            json={"title": "Beach house"},
+            headers=self._auth_headers(other_user["id"]),
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "Unauthorized action"},
+        )
+        self.assertEqual(facade.get_place(place["id"]).title, "Flat")
+
     def test_place_list_and_nested_review_creation_routes(self):
         owner = self._create_user()
         reviewer = self._create_user(

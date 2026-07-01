@@ -3,3 +3,10 @@ class PlaceNotFound(Exception):
 
     def __init__(self, place_id):
         super().__init__(f"Place '{place_id}' not found")
+
+
+class UnauthorizedAction(Exception):
+    """Raised when a user attempts an unauthorized action."""
+
+    def __init__(self):
+        super().__init__("Unauthorized action")

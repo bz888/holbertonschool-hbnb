@@ -1,5 +1,5 @@
 from utils.errors.amenity import AmenityNotFound
-from utils.errors.place import PlaceNotFound
+from utils.errors.place import PlaceNotFound, UnauthorizedAction
 from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
 from utils.errors.user import (
     EmailAlreadyRegistered,
@@ -244,7 +244,13 @@ class HBnBFacade:
             # is_active=True, future feature
         )
 
-    def update_place(self, place_id, place_data):
+    def update_place(self, place_id, place_data, current_user_id=None):
+        place = self.place_repo.get(place_id)
+        if place is None:
+            raise PlaceNotFound(place_id)
+
+        if current_user_id is not None and place.owner.id != current_user_id:
+            raise UnauthorizedAction()
 
         validate_allowed_fields(
             place_data,
@@ -253,10 +259,6 @@ class HBnBFacade:
         )
 
         data = place_data.copy()
-
-        place = self.place_repo.get(place_id)
-        if place is None:
-            raise PlaceNotFound(place_id)
 
         if "amenity_ids" in data:
             amenities = []

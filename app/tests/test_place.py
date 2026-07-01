@@ -9,7 +9,7 @@ from models.place import Place
 from models.user import User
 from services.facade import HBnBFacade
 from utils.errors.amenity import AmenityNotFound
-from utils.errors.place import PlaceNotFound
+from utils.errors.place import PlaceNotFound, UnauthorizedAction
 from utils.errors.user import UserNotFound
 
 
@@ -330,6 +330,26 @@ class TestPlace(unittest.TestCase):
         self.assertEqual(place.price, 250.0)
         self.assertEqual(place.latitude, -37.8)
         self.assertEqual(place.longitude, 144.9)
+
+    def test_facade_rejects_place_update_by_non_owner(self):
+        facade, _, place, _ = self._create_facade_place()
+        other_user = facade.create_user(
+            {
+                "first_name": "Grace",
+                "last_name": "Hopper",
+                "email": "grace@example.com",
+                "password": "test-password",
+            }
+        )
+
+        with self.assertRaises(UnauthorizedAction):
+            facade.update_place(
+                place.id,
+                {"title": "Beach house"},
+                current_user_id=other_user.id,
+            )
+
+        self.assertEqual(place.title, "Flat")
 
     def test_facade_replaces_and_clears_place_amenities(self):
         facade, _, place, original = self._create_facade_place(

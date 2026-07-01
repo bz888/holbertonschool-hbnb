@@ -6,13 +6,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from api.errors import (
     handle_email_already_registered,
+    handle_forbidden,
     handle_invalid_credentials,
     handle_invalid_request,
     handle_not_found,
     register_error_handlers,
 )
 from utils.errors.amenity import AmenityNotFound
-from utils.errors.place import PlaceNotFound
+from utils.errors.place import PlaceNotFound, UnauthorizedAction
 from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
 from utils.errors.user import (
     EmailAlreadyRegistered,
@@ -51,6 +52,7 @@ class TestApiErrorHandlers(unittest.TestCase):
                 InvalidCredentials,
                 PasswordRequired,
                 OwnerCannotReviewOwnPlace,
+                UnauthorizedAction,
                 ValueError,
             },
         )
@@ -88,6 +90,12 @@ class TestApiErrorHandlers(unittest.TestCase):
             {"error": "Owners cannot review their own place"},
         )
         self.assertEqual(status, 400)
+
+    def test_forbidden_handler_returns_403(self):
+        body, status = handle_forbidden(UnauthorizedAction())
+
+        self.assertEqual(body, {"error": "Unauthorized action"})
+        self.assertEqual(status, 403)
 
 
 if __name__ == "__main__":

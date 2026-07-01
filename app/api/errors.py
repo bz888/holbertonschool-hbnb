@@ -1,5 +1,5 @@
 from utils.errors.amenity import AmenityNotFound
-from utils.errors.place import PlaceNotFound
+from utils.errors.place import PlaceNotFound, UnauthorizedAction
 from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
 from utils.errors.user import (
     EmailAlreadyRegistered,
@@ -34,6 +34,11 @@ def handle_invalid_request(error):
     return _error_response(error), 400
 
 
+def handle_forbidden(error):
+    """Convert authorization failures into HTTP 403 responses."""
+    return _error_response(error), 403
+
+
 def register_error_handlers(api):
     """Register application-wide domain exception handlers."""
     for error_class in (
@@ -52,4 +57,5 @@ def register_error_handlers(api):
         handle_invalid_request
     )
     api.errorhandler(PasswordRequired)(handle_invalid_request)
+    api.errorhandler(UnauthorizedAction)(handle_forbidden)
     api.errorhandler(ValueError)(handle_invalid_request)
