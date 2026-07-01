@@ -35,15 +35,12 @@ jwt_error_model = api.model(
 class Login(Resource):
     @api.expect(login_model, validate=True)
     @api.response(200, "Login successful", login_response_model)
+    @api.response(400, "Invalid input data")
     @api.response(401, "Invalid credentials")
     def post(self):
         """Authenticate user and return a JWT token"""
         credentials = api.payload
-
-        user = facade.get_user_by_email(credentials["email"])
-
-        if not user or not user.verify_password(credentials["password"]):
-            return {"error": "Invalid credentials"}, 401
+        user = facade.authenticate_user(credentials)
 
         access_token = create_access_token(
             identity=str(user.id),

@@ -11,6 +11,8 @@ try:
     from __init__ import create_app
     from api.v1.auth import Login, ProtectedResource
     from services import facade
+    from services.facade import HBnBFacade
+    from utils.errors.user import InvalidCredentials
 except ModuleNotFoundError as error:
     if error.name not in {
         "flask",
@@ -24,6 +26,8 @@ except ModuleNotFoundError as error:
     Flask = None
     Login = None
     ProtectedResource = None
+    HBnBFacade = None
+    InvalidCredentials = None
 
 
 @unittest.skipIf(
@@ -38,18 +42,16 @@ class TestAuthUnit(unittest.TestCase):
         fake_user = Mock()
         fake_user.id = "user-123"
         fake_user.is_admin = True
-        fake_user.verify_password.return_value = True
+        credentials = {
+            "email": "admin@example.com",
+            "password": "test-password",
+        }
 
-        with self.request_app.test_request_context(
-            json={
-                "email": "admin@example.com",
-                "password": "test-password",
-            }
-        ):
+        with self.request_app.test_request_context(json=credentials):
             with patch(
-                "api.v1.auth.facade.get_user_by_email",
+                "api.v1.auth.facade.authenticate_user",
                 return_value=fake_user,
-            ) as get_user_by_email, patch(
+            ) as authenticate_user, patch(
                 "api.v1.auth.create_access_token",
                 return_value="jwt-token",
             ) as create_access_token:
@@ -57,36 +59,30 @@ class TestAuthUnit(unittest.TestCase):
 
         self.assertEqual(status, 200)
         self.assertEqual(body, {"access_token": "jwt-token"})
-        get_user_by_email.assert_called_once_with("admin@example.com")
-        fake_user.verify_password.assert_called_once_with(
-            "test-password"
-        )
+        authenticate_user.assert_called_once_with(credentials)
         create_access_token.assert_called_once_with(
             identity="user-123",
             additional_claims={"is_admin": True},
         )
 
-    def test_login_rejects_invalid_credentials_without_token(self):
-        fake_user = Mock()
-        fake_user.verify_password.return_value = False
-
-        with self.request_app.test_request_context(
-            json={
-                "email": "user@example.com",
-                "password": "wrong-password",
+    def test_facade_authenticate_user_rejects_invalid_credentials(self):
+        test_facade = HBnBFacade()
+        test_facade.create_user(
+            {
+                "first_name": "Auth",
+                "last_name": "User",
+                "email": "auth@example.com",
+                "password": "test-password",
             }
-        ):
-            with patch(
-                "api.v1.auth.facade.get_user_by_email",
-                return_value=fake_user,
-            ), patch(
-                "api.v1.auth.create_access_token",
-            ) as create_access_token:
-                body, status = Login().post()
+        )
 
-        self.assertEqual(status, 401)
-        self.assertEqual(body, {"error": "Invalid credentials"})
-        create_access_token.assert_not_called()
+        with self.assertRaises(InvalidCredentials):
+            test_facade.authenticate_user(
+                {
+                    "email": "auth@example.com",
+                    "password": "wrong-password",
+                }
+            )
 
     def test_protected_response_uses_current_identity_and_admin_claim(self):
         with patch(
@@ -191,6 +187,29 @@ class TestAuthIntegration(unittest.TestCase):
         self.assertEqual(
             response.get_json(),
             {"error": "Invalid credentials"},
+        )
+
+    def test_login_rejects_extra_request_fields(self):
+        self._create_user()
+
+        response = self.client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "auth@example.com",
+                "password": "test-password",
+                "is_admin": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {
+                "error": (
+                    "Invalid fields for login: is_admin. "
+                    "Allowed fields: email, password"
+                )
+            },
         )
 
     def test_protected_requires_jwt(self):

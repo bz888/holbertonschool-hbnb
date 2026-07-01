@@ -3,6 +3,7 @@ from utils.errors.place import PlaceNotFound
 from utils.errors.review import OwnerCannotReviewOwnPlace, ReviewNotFound
 from utils.errors.user import (
     EmailAlreadyRegistered,
+    InvalidCredentials,
     PasswordRequired,
     UserNotFound,
 )
@@ -16,6 +17,7 @@ from persistence.repository import InMemoryRepository
 from validators.fields import validate_allowed_fields
 
 ALLOWED_REVIEW_UPDATE_FIELDS = {"text", "rating"}
+ALLOWED_LOGIN_FIELDS = {"email", "password"}
 ALLOWED_USER_UPDATE_FIELDS = {"first_name", "last_name", "email"}
 ALLOWED_AMENITY_UPDATE_FIELDS = {"name"}
 ALLOWED_PLACE_UPDATE_FIELDS = {
@@ -71,6 +73,20 @@ class HBnBFacade:
             email=email,
             # is_active=True,
         )
+
+    def authenticate_user(self, credentials):
+        """Return the authenticated user or raise InvalidCredentials."""
+        validate_allowed_fields(
+            credentials,
+            ALLOWED_LOGIN_FIELDS,
+            resource_name="login",
+        )
+
+        user = self.get_user_by_email(credentials["email"])
+        if not user or not user.verify_password(credentials["password"]):
+            raise InvalidCredentials()
+
+        return user
 
     def get_all_users(self):
         """Return all users."""
