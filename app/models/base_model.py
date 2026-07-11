@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import DateTime, String
@@ -21,13 +21,13 @@ class BaseModel(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.timezone.utc
+        default=datetime.now(timezone.utc)
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.timezone.utc,
-        onupdate=datetime.timezone.utc
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc)
     )
 
     def update(self, data: dict) -> None:
