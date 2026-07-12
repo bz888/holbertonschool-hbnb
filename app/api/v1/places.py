@@ -1,4 +1,4 @@
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
 from api.v1.schemas.place import (
     placeAmenityResponseModel,
@@ -93,6 +93,7 @@ class PlaceResource(Resource):
             place_id,
             api.payload,
             current_user_id,
+            is_admin=get_jwt().get("is_admin", False) is True,
         )
         return {"message": "Place updated successfully"}, 200
 

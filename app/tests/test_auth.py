@@ -73,7 +73,8 @@ class TestAuthUnit(unittest.TestCase):
                 "last_name": "User",
                 "email": "auth@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
 
         with self.assertRaises(InvalidCredentials):
@@ -127,22 +128,36 @@ class TestAuthIntegration(unittest.TestCase):
         )
         self.client = self.app.test_client()
 
+    def test_app_creation_seeds_one_admin_idempotently(self):
+        admin = facade.get_user_by_email("admin@example.com")
+
+        self.assertIsNotNone(admin)
+        self.assertTrue(admin.is_admin)
+        self.assertTrue(admin.verify_password("admin-password"))
+
+        create_app()
+        matching_admins = [
+            user
+            for user in facade.get_all_users()
+            if user.email == "admin@example.com"
+        ]
+        self.assertEqual(len(matching_admins), 1)
+
     def _create_user(self, email="auth@example.com", is_admin=False):
-        response = self.client.post(
-            "/api/v1/users/",
-            json={
+        with self.app.app_context():
+            user = facade.create_user(
+                {
                 "first_name": "Auth",
                 "last_name": "User",
                 "email": email,
                 "password": "test-password",
-            },
-        )
-        self.assertEqual(response.status_code, 201)
-
-        user = facade.get_user_by_email(email)
+                "is_admin": is_admin,
+                },
+                is_admin=True,
+            )
         user.is_admin = is_admin
 
-        return response.get_json()
+        return {"id": user.id}
 
     def test_login_token_allows_protected_request_with_expected_body(self):
         user = self._create_user(is_admin=True)

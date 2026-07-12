@@ -2,12 +2,21 @@ class EmailAlreadyRegistered(Exception):
     """Raised when attempting to register an existing email."""
 
     def __init__(self, email=None):
-        message = (
-            f"Email '{email}' is already registered"
-            if email
-            else "Email is already registered"
-        )
-        super().__init__(message)
+        super().__init__("Email already registered")
+
+
+class EmailAlreadyInUse(Exception):
+    """Raised when a user update would duplicate an email address."""
+
+    def __init__(self):
+        super().__init__("Email already in use")
+
+
+class AdminPrivilegesRequired(Exception):
+    """Raised when a non-admin attempts an administrator-only action."""
+
+    def __init__(self):
+        super().__init__("Admin privileges required")
 
 
 class PasswordRequired(Exception):

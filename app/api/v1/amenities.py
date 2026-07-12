@@ -1,3 +1,4 @@
+from flask_jwt_extended import get_jwt, jwt_required
 from flask_restx import Namespace, Resource
 from api.v1.schemas.amenity import (
     amenityRequestModel,
@@ -25,9 +26,15 @@ class AmenityList(Resource):
     @api.expect(amenity_model, validate=True)
     @api.response(201, 'Amenity successfully created')
     @api.response(400, 'Invalid input data')
+    @api.response(401, 'Missing or invalid JWT')
+    @api.response(403, 'Admin privileges required')
+    @jwt_required()
     def post(self):
         """Create a new amenity"""
-        amenity = facade.create_amenity(api.payload)
+        amenity = facade.create_amenity(
+            api.payload,
+            is_admin=get_jwt().get('is_admin', False) is True,
+        )
         return amenity, 201
 
 
@@ -44,10 +51,17 @@ class AmenityResource(Resource):
     @api.expect(amenity_update_model, validate=True)
     @api.response(200, 'Amenity successfully updated')
     @api.response(400, 'Invalid input data')
+    @api.response(401, 'Missing or invalid JWT')
+    @api.response(403, 'Admin privileges required')
     @api.response(404, 'Amenity not found')
+    @jwt_required()
     def put(self, amenity_id):
         """Update an existing amenity"""
-        facade.update_amenity(amenity_id, api.payload)
+        facade.update_amenity(
+            amenity_id,
+            api.payload,
+            is_admin=get_jwt().get('is_admin', False) is True,
+        )
         return {'message': 'Amenity updated successfully'}, 200
 
     @api.response(200, 'Amenity successfully deleted')

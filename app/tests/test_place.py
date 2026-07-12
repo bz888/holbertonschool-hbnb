@@ -25,10 +25,11 @@ class TestPlace(unittest.TestCase):
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
         amenities = [
-            facade.create_amenity({"name": name})
+            facade.create_amenity({"name": name}, is_admin=True)
             for name in amenity_names
         ]
         place = facade.create_place(
@@ -291,7 +292,8 @@ class TestPlace(unittest.TestCase):
                 "last_name": "Hopper",
                 "email": "grace@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
 
         with self.assertRaisesRegex(
@@ -305,6 +307,7 @@ class TestPlace(unittest.TestCase):
                 place.id,
                 {"owner_id": replacement_owner.id},
                 current_user_id=owner.id,
+                is_admin=False,
             )
 
         self.assertIs(place.owner, owner)
@@ -324,6 +327,7 @@ class TestPlace(unittest.TestCase):
                 "longitude": 144.9,
             },
             current_user_id=owner.id,
+            is_admin=False,
         )
 
         self.assertIs(updated_place, place)
@@ -341,7 +345,8 @@ class TestPlace(unittest.TestCase):
                 "last_name": "Hopper",
                 "email": "grace@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
 
         with self.assertRaises(UnauthorizedAction):
@@ -349,9 +354,23 @@ class TestPlace(unittest.TestCase):
                 place.id,
                 {"title": "Beach house"},
                 current_user_id=other_user.id,
+                is_admin=False,
             )
 
         self.assertEqual(place.title, "Flat")
+
+    def test_admin_can_update_place_owned_by_another_user(self):
+        facade, _, place, _ = self._create_facade_place()
+
+        updated_place = facade.update_place(
+            place.id,
+            {"title": "Admin updated"},
+            current_user_id="admin-user",
+            is_admin=True,
+        )
+
+        self.assertIs(updated_place, place)
+        self.assertEqual(place.title, "Admin updated")
 
     def test_facade_rejects_place_update_without_authenticated_user(self):
         facade, _, place, _ = self._create_facade_place()
@@ -361,6 +380,7 @@ class TestPlace(unittest.TestCase):
                 place.id,
                 {"title": "Beach house"},
                 current_user_id=None,
+                is_admin=False,
             )
 
         self.assertEqual(place.title, "Flat")
@@ -369,13 +389,17 @@ class TestPlace(unittest.TestCase):
         facade, owner, place, original = self._create_facade_place(
             ("Wi-Fi",)
         )
-        pool = facade.create_amenity({"name": "Pool"})
-        parking = facade.create_amenity({"name": "Parking"})
+        pool = facade.create_amenity({"name": "Pool"}, is_admin=True)
+        parking = facade.create_amenity(
+            {"name": "Parking"},
+            is_admin=True,
+        )
 
         facade.update_place(
             place.id,
             {"amenity_ids": [pool.id, parking.id]},
             current_user_id=owner.id,
+            is_admin=False,
         )
 
         self.assertEqual(place.amenities, [pool, parking])
@@ -385,6 +409,7 @@ class TestPlace(unittest.TestCase):
             place.id,
             {"amenity_ids": []},
             current_user_id=owner.id,
+            is_admin=False,
         )
 
         self.assertEqual(place.amenities, [])
@@ -399,6 +424,7 @@ class TestPlace(unittest.TestCase):
                 place.id,
                 {"amenity_ids": ["missing-amenity"]},
                 current_user_id=owner.id,
+                is_admin=False,
             )
 
         self.assertEqual(place.amenities, amenities)
@@ -411,6 +437,7 @@ class TestPlace(unittest.TestCase):
                 "missing-place",
                 {"title": "Beach house"},
                 current_user_id="missing-owner",
+                is_admin=False,
             )
 
     def test_delete_place_hard_deletes_place(self):

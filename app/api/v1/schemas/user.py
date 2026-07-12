@@ -32,6 +32,10 @@ userUpdateModel = {
         required=False,
         description="Email of the user",
     ),
+    "password": fields.String(
+        required=False,
+        description="Password of the user",
+    ),
 }
 
 userResponseModel = {

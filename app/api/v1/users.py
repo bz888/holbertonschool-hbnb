@@ -1,4 +1,4 @@
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource
 from api.v1.schemas.user import (
     userCreatedResponseModel,
@@ -39,9 +39,15 @@ class UserList(Resource):
     @api.response(201, "User successfully created")
     @api.response(400, "Invalid input data")
     @api.response(400, "Email already registered")
+    @api.response(401, "Missing or invalid JWT")
+    @api.response(403, "Admin privileges required")
+    @jwt_required()
     def post(self):
-        """Register a new user."""
-        new_user = facade.create_user(api.payload)
+        """Create a new user as an administrator."""
+        new_user = facade.create_user(
+            api.payload,
+            is_admin=get_jwt().get("is_admin", False) is True,
+        )
         return {
             "id": new_user.id,
             "message": "User successfully created",
@@ -65,16 +71,18 @@ class UserResource(Resource):
     @api.response(200, "User successfully updated")
     @api.response(400, "Invalid input data")
     @api.response(401, "Missing or invalid JWT")
-    @api.response(403, "Unauthorized action")
+    @api.response(403, "Admin privileges required")
     @api.response(404, "User not found")
     @jwt_required()
     def put(self, user_id):
         """Update user details by ID."""
         current_user_id = get_jwt_identity()
+        is_admin = get_jwt().get("is_admin", False) is True
         user = facade.update_user(
             user_id,
             api.payload,
             current_user_id=current_user_id,
+            is_admin=is_admin,
         )
         return user, 200
 

@@ -6,10 +6,11 @@ from utils.errors.review import (
     ReviewNotFound,
 )
 from utils.errors.user import (
+    AdminPrivilegesRequired,
+    EmailAlreadyInUse,
     EmailAlreadyRegistered,
     InvalidCredentials,
     PasswordRequired,
-    RestrictedUserFieldUpdate,
     UserNotFound,
 )
 from models.amenity import Amenity
@@ -24,6 +25,12 @@ from validators.fields import validate_allowed_fields
 ALLOWED_REVIEW_UPDATE_FIELDS = {"text", "rating"}
 ALLOWED_LOGIN_FIELDS = {"email", "password"}
 ALLOWED_USER_UPDATE_FIELDS = {"first_name", "last_name"}
+ALLOWED_ADMIN_USER_UPDATE_FIELDS = {
+    "first_name",
+    "last_name",
+    "email",
+    "password",
+}
 ALLOWED_AMENITY_UPDATE_FIELDS = {"name"}
 ALLOWED_PLACE_UPDATE_FIELDS = {
     "title",
@@ -44,8 +51,11 @@ class HBnBFacade:
         self.review_repo = InMemoryRepository()
         self.amenity_repo = InMemoryRepository()
 
-    def create_user(self, user_data):
+    def create_user(self, user_data, is_admin):
         """Create and store a user."""
+        if not is_admin:
+            raise AdminPrivilegesRequired()
+
         data = user_data.copy()
         email = User.normalize_email(data["email"])
         existing_user = self.user_repo.find_one(
@@ -99,28 +109,51 @@ class HBnBFacade:
             # is_active=True, future feature
         )
 
-    def update_user(self, user_id, user_data, current_user_id) -> User:
+    def update_user(
+        self,
+        user_id,
+        user_data,
+        current_user_id,
+        is_admin,
+    ) -> User:
         """Update and return a user."""
         user = self.user_repo.get(user_id)
         if user is None:
             raise UserNotFound(user_id)
 
-        if user.id != current_user_id:
-            raise UnauthorizedAction()
-
-        if {"email", "password"} & set(user_data):
-            raise RestrictedUserFieldUpdate()
+        protected_fields = {"email", "password"} & set(user_data)
+        if not is_admin and (
+            user.id != current_user_id or protected_fields
+        ):
+            raise AdminPrivilegesRequired()
 
         validate_allowed_fields(
             user_data,
-            ALLOWED_USER_UPDATE_FIELDS,
+            (
+                ALLOWED_ADMIN_USER_UPDATE_FIELDS
+                if is_admin
+                else ALLOWED_USER_UPDATE_FIELDS
+            ),
             resource_name="user",
         )
 
-        updated_user = self.user_repo.update(user_id, user_data)
+        data = user_data.copy()
+        if "email" in data:
+            email = User.normalize_email(data["email"])
+            existing_user = self.user_repo.find_one(email=email)
+            if existing_user is not None and existing_user.id != user_id:
+                raise EmailAlreadyInUse()
+            data["email"] = email
+
+        password = data.pop("password", None)
+        updated_user = self.user_repo.update(user_id, data)
 
         if updated_user is None:
             raise UserNotFound(user_id)
+
+        if password is not None:
+            updated_user.hash_password(password)
+            updated_user.save()
 
         return updated_user
 
@@ -152,7 +185,10 @@ class HBnBFacade:
         # where reviews and places must retain a valid user reference.
         return user
 
-    def create_amenity(self, amenity_data):
+    def create_amenity(self, amenity_data, is_admin):
+        if not is_admin:
+            raise AdminPrivilegesRequired()
+
         name = amenity_data.get("name")
         if not isinstance(name, str) or not name.strip():
             raise ValueError("Amenity name must be a non-empty string")
@@ -169,7 +205,10 @@ class HBnBFacade:
     def get_all_amenities(self):
         return self.amenity_repo.get_all()
 
-    def update_amenity(self, amenity_id, amenity_data):
+    def update_amenity(self, amenity_id, amenity_data, is_admin):
+        if not is_admin:
+            raise AdminPrivilegesRequired()
+
         validate_allowed_fields(
             amenity_data,
             ALLOWED_AMENITY_UPDATE_FIELDS,
@@ -242,13 +281,21 @@ class HBnBFacade:
             # is_active=True, future feature
         )
 
-    def update_place(self, place_id, place_data, current_user_id):
+    def update_place(
+        self,
+        place_id,
+        place_data,
+        current_user_id,
+        is_admin,
+    ):
         place = self.place_repo.get(place_id)
         if place is None:
             raise PlaceNotFound(place_id)
 
 # another check for None, as JWT on the api layer is only for extracting user.
-        if current_user_id is None or place.owner.id != current_user_id:
+        if not is_admin and (
+            current_user_id is None or place.owner.id != current_user_id
+        ):
             raise UnauthorizedAction()
 
         validate_allowed_fields(
@@ -327,14 +374,20 @@ class HBnBFacade:
 
         return self.review_repo.find_all(user=user)
 
-    def update_review(self, review_id, review_data, current_user_id):
+    def update_review(
+        self,
+        review_id,
+        review_data,
+        current_user_id,
+        is_admin,
+    ):
         data = review_data.copy()
 
         review = self.review_repo.get(review_id)
         if review is None:
             raise ReviewNotFound(review_id)
 
-        if review.user.id != current_user_id:
+        if not is_admin and review.user.id != current_user_id:
             raise UnauthorizedAction()
 
         validate_allowed_fields(
@@ -349,12 +402,17 @@ class HBnBFacade:
 
         return updated_review
 
-    def delete_review(self, review_id, current_user_id):
+    def delete_review(
+        self,
+        review_id,
+        current_user_id,
+        is_admin,
+    ):
         review = self.review_repo.get(review_id)
         if review is None:
             raise ReviewNotFound(review_id)
 
-        if review.user.id != current_user_id:
+        if not is_admin and review.user.id != current_user_id:
             raise UnauthorizedAction()
 
         self.review_repo.delete(review_id)

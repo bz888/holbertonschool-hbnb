@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from models.amenity import Amenity
 from services.facade import HBnBFacade
 from utils.errors.amenity import AmenityNotFound
+from utils.errors.user import AdminPrivilegesRequired
 
 
 class TestAmenity(unittest.TestCase):
@@ -76,9 +77,12 @@ class TestAmenity(unittest.TestCase):
         facade = HBnBFacade()
 
         with self.assertRaises(ValueError):
-            facade.create_amenity({"name": "  "})
+            facade.create_amenity({"name": "  "}, is_admin=True)
 
-        amenity = facade.create_amenity({"name": "Wi-Fi"})
+        amenity = facade.create_amenity(
+            {"name": "Wi-Fi"},
+            is_admin=True,
+        )
 
         for invalid_data in ({}, {"name": None}, {"name": "  "}):
             with self.subTest(invalid_data=invalid_data):
@@ -86,6 +90,7 @@ class TestAmenity(unittest.TestCase):
                     facade.update_amenity(
                         amenity.id,
                         invalid_data,
+                        is_admin=True,
                     )
 
     def test_update_raises_when_amenity_does_not_exist(self):
@@ -95,24 +100,32 @@ class TestAmenity(unittest.TestCase):
             facade.update_amenity(
                 "missing-id",
                 {"name": "Pool"},
+                is_admin=True,
             )
 
     def test_facade_creates_and_updates_amenity(self):
         facade = HBnBFacade()
-        amenity = facade.create_amenity({"name": "  Wi-Fi  "})
+        amenity = facade.create_amenity(
+            {"name": "  Wi-Fi  "},
+            is_admin=True,
+        )
 
         self.assertEqual(amenity.name, "Wi-Fi")
 
         updated_amenity = facade.update_amenity(
             amenity.id,
             {"name": "Parking"},
+            is_admin=True,
         )
 
         self.assertEqual(updated_amenity.name, "Parking")
 
     def test_facade_amenity_update_rejects_unsupported_fields(self):
         facade = HBnBFacade()
-        amenity = facade.create_amenity({"name": "Wi-Fi"})
+        amenity = facade.create_amenity(
+            {"name": "Wi-Fi"},
+            is_admin=True,
+        )
 
         with self.assertRaisesRegex(
             ValueError,
@@ -127,9 +140,27 @@ class TestAmenity(unittest.TestCase):
                     "name": "Parking",
                     "is_active": False,
                 },
+                is_admin=True,
             )
 
         self.assertEqual(amenity.name, "Wi-Fi")
+
+    def test_facade_amenity_mutations_require_admin(self):
+        facade = HBnBFacade()
+
+        with self.assertRaises(AdminPrivilegesRequired):
+            facade.create_amenity({"name": "Wi-Fi"}, is_admin=False)
+
+        amenity = facade.create_amenity(
+            {"name": "Wi-Fi"},
+            is_admin=True,
+        )
+        with self.assertRaises(AdminPrivilegesRequired):
+            facade.update_amenity(
+                amenity.id,
+                {"name": "Parking"},
+                is_admin=False,
+            )
 
 
 if __name__ == "__main__":
