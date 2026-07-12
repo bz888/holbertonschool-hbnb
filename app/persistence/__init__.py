@@ -1,3 +1,3 @@
-from .repository import InMemoryRepository, Repository
+from .repository import SQLAlchemyRepository, Repository
 
-__all__ = ["InMemoryRepository", "Repository"]
+__all__ = ["SQLAlchemyRepository", "Repository"]

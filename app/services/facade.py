@@ -17,8 +17,11 @@ from models.amenity import Amenity
 from models.place import Place
 from models.review import Review
 from models.user import User
-from persistence.repository import InMemoryRepository, SQLAlchemyRepository
+
 from persistence.user_repository import UserRepository
+from persistence.amenity_repository import AmenityRepository
+from persistence.review_repository import ReviewRepository
+from persistence.place_repository import PlaceRepository
 
 # validators
 from validators.fields import validate_allowed_fields
@@ -48,10 +51,9 @@ class HBnBFacade:
 
     def __init__(self):
         self.user_repo = UserRepository()
-
-        self.place_repo = InMemoryRepository()
-        self.review_repo = InMemoryRepository()
-        self.amenity_repo = InMemoryRepository()
+        self.place_repo = PlaceRepository()
+        self.review_repo = ReviewRepository()
+        self.amenity_repo = AmenityRepository()
 
     def create_user(self, user_data, is_admin):
         """Create and store a user."""

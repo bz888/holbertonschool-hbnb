@@ -1,56 +1,64 @@
 from .base_model import BaseModel
+from extensions import db
 
-
-from sqlalchemy import Boolean, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
-
-# class Review(BaseModel):
-
-
-#     text: Mapped[str] = mapped_column(
-#         String(50),
-#         nullable=False,
-#     )
-
-#     text: Mapped[str] = mapped_column(
-#         String(50),
-#         nullable=False,
-#     )
-
+from sqlalchemy.orm import validates
 
 
 
 class Review(BaseModel):
-    """Review model."""
+    """Review model"""
 
-    def __init__(self, text, rating, place, user):
-        super().__init__()
-        self.text = text
-        self.rating = rating
-        self.place = place
-        self.user = user
+    __tablename__ = 'reviews'
 
-    @property
-    def text(self):
-        return self._text
+    text = db.Column(
+        db.String(50),
+        nullable=False
+    )
 
-    @text.setter
-    def text(self, value):
+    rating = db.Column(
+        db.Integer,
+        nullable=False,
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    place_id = db.Column(
+        db.Integer,
+        db.ForeignKey("places.id"),
+        nullable=False,
+    )
+
+    # user = db.relationship(
+    #     "User",
+    #     back_populates="reviews",
+    # )
+
+    # place = db.relationship(
+    #     "Place",
+    #     back_populates="reviews",
+    # )
+
+    @validates("text")
+    def validate_text(self, key, value):
         if not isinstance(value, str):
             raise ValueError("Review text must be a string")
 
-        text = value.strip()
-        if not text:
+        value = value.strip()
+
+        if not value:
             raise ValueError("Review text is required")
 
-        self._text = text
+        if len(value) > 50:
+            raise ValueError("Review text must be 50 characters or fewer")
 
-    @property
-    def rating(self):
-        return self._rating
+        return value
 
-    @rating.setter
-    def rating(self, value):
+    @validates("rating")
+    def validate_rating(self, key, value):
         if (
             not isinstance(value, int)
             or isinstance(value, bool)
@@ -60,41 +68,15 @@ class Review(BaseModel):
                 "Review rating must be an integer from 1 to 5"
             )
 
-        self._rating = value
-
-    @property
-    def place(self):
-        return self._place
-
-    @place.setter
-    def place(self, value):
-        from .place import Place
-
-        if not isinstance(value, Place):
-            raise ValueError("Review place must be a Place")
-
-        self._place = value
-
-    @property
-    def user(self):
-        return self._user
-
-    @user.setter
-    def user(self, value):
-        from .user import User
-
-        if not isinstance(value, User):
-            raise ValueError("Review user must be a User")
-
-        self._user = value
+        return value
 
     def to_dict(self):
         return {
             "id": self.id,
             "text": self.text,
             "rating": self.rating,
-            "place_id": self.place.id,
-            "user_id": self.user.id,
+            "place_id": self.place_id,
+            "user_id": self.user_id,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

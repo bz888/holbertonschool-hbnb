@@ -1,31 +1,42 @@
+from extensions import db
+from sqlalchemy.orm import validates
+
 from .base_model import BaseModel
 
 
 class Amenity(BaseModel):
     """Amenity model."""
 
-    def __init__(self, name):
-        super().__init__()
-        self.name = name
+    __tablename__ = "amenities"
 
-    @property
-    def name(self):
-        return self._name
+    name = db.Column(
+        db.String(50),
+        nullable=False,
+        unique=True,
+    )
 
-    @name.setter
-    def name(self, value):
+    # places = db.relationship(
+    #     "Place",
+    #     secondary="place_amenities",
+    #     back_populates="amenities",
+    # )
+
+    @validates("name")
+    def validate_name(self, key, value):
         if not isinstance(value, str):
             raise ValueError("Amenity name must be a string")
 
-        name = value.strip()
-        if not name:
+        value = value.strip()
+
+        if not value:
             raise ValueError("Amenity name is required")
-        if len(name) > 50:
+
+        if len(value) > 50:
             raise ValueError(
                 "Amenity name must be 50 characters or fewer"
             )
 
-        self._name = name
+        return value
 
     def to_dict(self):
         return {
