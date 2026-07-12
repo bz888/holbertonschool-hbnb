@@ -20,6 +20,8 @@ from utils.errors.review import (
     ReviewNotFound,
 )
 from utils.errors.user import (
+    AdminPrivilegesRequired,
+    EmailAlreadyInUse,
     EmailAlreadyRegistered,
     InvalidCredentials,
     PasswordRequired,
@@ -53,6 +55,8 @@ class TestApiErrorHandlers(unittest.TestCase):
                 PlaceNotFound,
                 ReviewNotFound,
                 UserNotFound,
+                AdminPrivilegesRequired,
+                EmailAlreadyInUse,
                 EmailAlreadyRegistered,
                 InvalidCredentials,
                 PasswordRequired,
@@ -77,7 +81,7 @@ class TestApiErrorHandlers(unittest.TestCase):
 
         self.assertEqual(
             body,
-            {"error": "Email 'ada@example.com' is already registered"},
+            {"error": "Email already registered"},
         )
         self.assertEqual(status, 400)
 
@@ -119,6 +123,17 @@ class TestApiErrorHandlers(unittest.TestCase):
 
         self.assertEqual(body, {"error": "Unauthorized action"})
         self.assertEqual(status, 403)
+
+        body, status = handle_forbidden(AdminPrivilegesRequired())
+
+        self.assertEqual(body, {"error": "Admin privileges required"})
+        self.assertEqual(status, 403)
+
+    def test_duplicate_update_email_returns_400(self):
+        body, status = handle_invalid_request(EmailAlreadyInUse())
+
+        self.assertEqual(body, {"error": "Email already in use"})
+        self.assertEqual(status, 400)
 
 
 if __name__ == "__main__":

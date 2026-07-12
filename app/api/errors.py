@@ -6,6 +6,8 @@ from utils.errors.review import (
     ReviewNotFound,
 )
 from utils.errors.user import (
+    AdminPrivilegesRequired,
+    EmailAlreadyInUse,
     EmailAlreadyRegistered,
     InvalidCredentials,
     PasswordRequired,
@@ -57,6 +59,8 @@ def register_error_handlers(api):
     api.errorhandler(EmailAlreadyRegistered)(
         handle_email_already_registered
     )
+    api.errorhandler(EmailAlreadyInUse)(handle_invalid_request)
+    api.errorhandler(AdminPrivilegesRequired)(handle_forbidden)
     api.errorhandler(InvalidCredentials)(handle_invalid_credentials)
     api.errorhandler(DuplicateReview)(handle_invalid_request)
     api.errorhandler(OwnerCannotReviewOwnPlace)(

@@ -42,6 +42,11 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             "test-secret-key-with-at-least-32-characters"
         )
         self.client = self.app.test_client()
+        self.admin = facade.get_user_by_email("admin@example.com")
+        self.admin_headers = self._auth_headers(
+            self.admin.id,
+            is_admin=True,
+        )
 
     def _auth_headers(self, user_id, is_admin=False, expires_delta=None):
         token_args = {
@@ -58,8 +63,11 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
 
     def _tampered_auth_headers(self, user_id):
         token = self._auth_headers(user_id)["Authorization"].split(" ", 1)[1]
-        replacement = "a" if token[-1] != "a" else "b"
-        return {"Authorization": f"Bearer {token[:-1]}{replacement}"}
+        header, payload, signature = token.split(".")
+        replacement = "a" if signature[0] != "a" else "b"
+        tampered_signature = replacement + signature[1:]
+        tampered_token = ".".join((header, payload, tampered_signature))
+        return {"Authorization": f"Bearer {tampered_token}"}
 
     def _create_user(
         self,
@@ -75,6 +83,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "email": email,
                 "password": "test-password",
             },
+            headers=self.admin_headers,
         )
         self.assertEqual(response.status_code, 201)
         return response.get_json()
@@ -83,6 +92,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         response = self.client.post(
             "/api/v1/amenities/",
             json={"name": name},
+            headers=self.admin_headers,
         )
         self.assertEqual(response.status_code, 201)
         return response.get_json()
@@ -204,6 +214,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         amenity = self.client.post(
             "/api/v1/amenities/",
             json={"name": "Wi-Fi"},
+            headers=self.admin_headers,
         ).get_json()
 
         checks = (
@@ -231,6 +242,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.post(
                     "/api/v1/amenities/",
                     json={"name": "   "},
+                    headers=self.admin_headers,
                 ),
                 400,
                 {
@@ -243,6 +255,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.put(
                     f"/api/v1/amenities/{amenity['id']}",
                     json={},
+                    headers=self.admin_headers,
                 ),
                 400,
                 {
@@ -268,7 +281,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.put(
                     "/api/v1/users/missing",
                     json={"email": "new@example.com"},
-                    headers=self._auth_headers(reviewer["id"]),
+                    headers=self.admin_headers,
                 ),
                 {"error": "User 'missing' not found"},
             ),
@@ -284,6 +297,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 self.client.put(
                     "/api/v1/amenities/missing",
                     json={"name": "Pool"},
+                    headers=self.admin_headers,
                 ),
                 {"error": "Amenity 'missing' not found"},
             ),
@@ -349,21 +363,19 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         user_response = self.client.post(
             "/api/v1/users/",
             json=user_data,
+            headers=self.admin_headers,
         )
         duplicate_response = self.client.post(
             "/api/v1/users/",
             json=user_data,
+            headers=self.admin_headers,
         )
 
         self.assertEqual(user_response.status_code, 201)
         self.assertEqual(duplicate_response.status_code, 400)
         self.assertEqual(
             duplicate_response.get_json(),
-            {
-                "error": (
-                    "Email 'ada@example.com' is already registered"
-                )
-            },
+            {"error": "Email already registered"},
         )
 
         owner_id = user_response.get_json()["id"]
@@ -561,6 +573,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "email": "ada@example.com",
                 "password": "correct horse battery staple",
             },
+            headers=self.admin_headers,
         )
         user_id = created_response.get_json()["id"]
         retrieved_response = self.client.get(
@@ -660,7 +673,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
             response.get_json(),
-            {"error": "Unauthorized action"},
+            {"error": "Admin privileges required"},
         )
         self.assertEqual(facade.get_user(user["id"]).first_name, "Owner")
 
@@ -674,10 +687,10 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         )
 
         stored_user = facade.get_user(user["id"])
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(
             response.get_json(),
-            {"error": "You cannot modify email or password."},
+            {"error": "Admin privileges required"},
         )
         self.assertEqual(stored_user.email, "owner@example.com")
 
@@ -691,12 +704,133 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         )
 
         stored_user = facade.get_user(user["id"])
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "Admin privileges required"},
+        )
+        self.assertTrue(stored_user.verify_password("test-password"))
+
+    def test_admin_only_user_and_amenity_routes_enforce_claim(self):
+        user = self._create_user()
+        amenity = self._create_amenity()
+        regular_headers = self._auth_headers(user["id"])
+        with self.app.app_context():
+            token_without_admin_claim = create_access_token(
+                identity=user["id"]
+            )
+        missing_claim_headers = {
+            "Authorization": f"Bearer {token_without_admin_claim}"
+        }
+
+        requests = (
+            self.client.post(
+                "/api/v1/users/",
+                json={
+                    "first_name": "New",
+                    "last_name": "User",
+                    "email": "new@example.com",
+                    "password": "test-password",
+                },
+            ),
+            self.client.post(
+                "/api/v1/amenities/",
+                json={"name": "Pool"},
+            ),
+            self.client.put(
+                f"/api/v1/amenities/{amenity['id']}",
+                json={"name": "Parking"},
+            ),
+        )
+
+        for response in requests:
+            self.assertEqual(response.status_code, 401)
+
+        regular_requests = (
+            self.client.post(
+                "/api/v1/users/",
+                json={
+                    "first_name": "New",
+                    "last_name": "User",
+                    "email": "new@example.com",
+                    "password": "test-password",
+                },
+                headers=regular_headers,
+            ),
+            self.client.post(
+                "/api/v1/amenities/",
+                json={"name": "Pool"},
+                headers=regular_headers,
+            ),
+            self.client.put(
+                f"/api/v1/amenities/{amenity['id']}",
+                json={"name": "Parking"},
+                headers=regular_headers,
+            ),
+        )
+
+        for response in regular_requests:
+            self.assertEqual(response.status_code, 403)
+            self.assertEqual(
+                response.get_json(),
+                {"error": "Admin privileges required"},
+            )
+
+        missing_claim_response = self.client.post(
+            "/api/v1/amenities/",
+            json={"name": "Sauna"},
+            headers=missing_claim_headers,
+        )
+        self.assertEqual(missing_claim_response.status_code, 403)
+        self.assertEqual(
+            missing_claim_response.get_json(),
+            {"error": "Admin privileges required"},
+        )
+
+    def test_admin_updates_another_users_email_and_password(self):
+        user = self._create_user()
+
+        response = self.client.put(
+            f"/api/v1/users/{user['id']}",
+            json={
+                "email": "updated@example.com",
+                "password": "updated-password",
+            },
+            headers=self.admin_headers,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        stored_user = facade.get_user(user["id"])
+        self.assertEqual(stored_user.email, "updated@example.com")
+        self.assertTrue(stored_user.verify_password("updated-password"))
+
+    def test_admin_user_update_rejects_duplicate_email(self):
+        user = self._create_user()
+        other_user = self._create_user(
+            first_name="Other",
+            last_name="User",
+            email="other@example.com",
+        )
+
+        response = self.client.put(
+            f"/api/v1/users/{user['id']}",
+            json={"email": " OTHER@EXAMPLE.COM "},
+            headers=self.admin_headers,
+        )
+
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
             response.get_json(),
-            {"error": "You cannot modify email or password."},
+            {"error": "Email already in use"},
         )
-        self.assertTrue(stored_user.verify_password("test-password"))
+        self.assertEqual(
+            facade.get_user(user["id"]).email,
+            "owner@example.com",
+        )
+        self.assertEqual(
+            facade.get_user(other_user["id"]).email,
+            "other@example.com",
+        )
 
     def test_user_registration_hashes_password_and_hides_it(self):
         plain_password = "correct horse battery staple"
@@ -708,6 +842,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "email": "password-check@example.com",
                 "password": plain_password,
             },
+            headers=self.admin_headers,
         )
         created_body = created_response.get_json()
 
@@ -768,6 +903,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         amenity_update_response = self.client.put(
             f"/api/v1/amenities/{amenity['id']}",
             json={"name": "Parking"},
+            headers=self.admin_headers,
         )
         review_update_response = self.client.put(
             f"/api/v1/reviews/{review['id']}",
@@ -859,6 +995,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                 "email": "hard@example.com",
                 "password": "test-password",
             },
+            headers=self.admin_headers,
         )
         hard_user_id = hard_user_response.get_json()["id"]
 
@@ -936,6 +1073,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
                         "name": "Parking",
                         "is_active": False,
                     },
+                    headers=self.admin_headers,
                 ),
                 {
                     "error": (
@@ -1039,6 +1177,22 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             {"error": "Unauthorized action"},
         )
         self.assertEqual(facade.get_place(place["id"]).title, "Flat")
+
+    def test_admin_can_update_place_owned_by_another_user(self):
+        owner = self._create_user()
+        place = self._create_place(owner["id"])
+
+        response = self.client.put(
+            f"/api/v1/places/{place['id']}",
+            json={"title": "Admin updated"},
+            headers=self.admin_headers,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            facade.get_place(place["id"]).title,
+            "Admin updated",
+        )
 
     def test_place_list_and_nested_review_creation_routes(self):
         owner = self._create_user()
@@ -1145,6 +1299,30 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.assertEqual(stored_review.rating, 5)
         self.assertIn(stored_review, stored_review.user.reviews)
         self.assertIn(stored_review, stored_review.place.reviews)
+
+    def test_admin_can_update_and_delete_another_users_review(self):
+        owner = self._create_user()
+        reviewer = self._create_user(
+            first_name="Review",
+            last_name="Author",
+            email="reviewer@example.com",
+        )
+        place = self._create_place(owner["id"])
+        review = self._create_review(place["id"], reviewer["id"])
+
+        update_response = self.client.put(
+            f"/api/v1/reviews/{review['id']}",
+            json={"rating": 4},
+            headers=self.admin_headers,
+        )
+        delete_response = self.client.delete(
+            f"/api/v1/reviews/{review['id']}",
+            headers=self.admin_headers,
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertIsNone(facade.review_repo.get(review["id"]))
 
     def test_place_details_include_nested_relationships(self):
         owner = self._create_user()

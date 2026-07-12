@@ -151,6 +151,7 @@ class TestReview(unittest.TestCase):
                 "rating": 4,
             },
             current_user_id=reviewer.id,
+            is_admin=False,
         )
 
         self.assertEqual(updated_review.text, "Updated review")
@@ -168,7 +169,8 @@ class TestReview(unittest.TestCase):
                 "last_name": "User",
                 "email": "other@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
 
         with self.assertRaises(UnauthorizedAction):
@@ -176,9 +178,25 @@ class TestReview(unittest.TestCase):
                 review.id,
                 {"rating": 4},
                 current_user_id=other_user.id,
+                is_admin=False,
             )
 
         self.assertEqual(review.rating, 5)
+
+    def test_admin_can_update_review_created_by_another_user(self):
+        facade, _, _, _, review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        updated_review = facade.update_review(
+            review.id,
+            {"rating": 4},
+            current_user_id="admin-user",
+            is_admin=True,
+        )
+
+        self.assertIs(updated_review, review)
+        self.assertEqual(review.rating, 4)
 
     def test_facade_review_update_rejects_unsupported_fields(self):
         facade, _, reviewer, place, review = self._create_review(
@@ -202,6 +220,7 @@ class TestReview(unittest.TestCase):
                         review.id,
                         {field: value},
                         current_user_id=reviewer.id,
+                        is_admin=False,
                     )
 
         self.assertIs(review.user, reviewer)
@@ -226,7 +245,8 @@ class TestReview(unittest.TestCase):
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
         place = facade.create_place(
             {
@@ -257,7 +277,8 @@ class TestReview(unittest.TestCase):
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
         reviewer = facade.create_user(
             {
@@ -265,7 +286,8 @@ class TestReview(unittest.TestCase):
                 "last_name": "Hopper",
                 "email": "grace@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
         place = facade.create_place(
             {
@@ -298,7 +320,8 @@ class TestReview(unittest.TestCase):
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
         place = facade.create_place(
             {
@@ -392,7 +415,11 @@ class TestReview(unittest.TestCase):
             facade=HBnBFacade()
         )
 
-        facade.delete_review(review.id, current_user_id=reviewer.id)
+        facade.delete_review(
+            review.id,
+            current_user_id=reviewer.id,
+            is_admin=False,
+        )
 
         self.assertNotIn(review, reviewer.reviews)
         self.assertNotIn(review, place.reviews)
@@ -409,18 +436,35 @@ class TestReview(unittest.TestCase):
                 "last_name": "User",
                 "email": "other-delete@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
 
         with self.assertRaises(UnauthorizedAction):
             facade.delete_review(
                 review.id,
                 current_user_id=other_user.id,
+                is_admin=False,
             )
 
         self.assertIs(facade.get_review(review.id), review)
         self.assertIn(review, reviewer.reviews)
         self.assertIn(review, place.reviews)
+
+    def test_admin_can_delete_review_created_by_another_user(self):
+        facade, _, reviewer, place, review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        facade.delete_review(
+            review.id,
+            current_user_id="admin-user",
+            is_admin=True,
+        )
+
+        self.assertIsNone(facade.review_repo.get(review.id))
+        self.assertNotIn(review, reviewer.reviews)
+        self.assertNotIn(review, place.reviews)
 
     def _create_review(self, facade):
         owner = facade.create_user(
@@ -429,7 +473,8 @@ class TestReview(unittest.TestCase):
                 "last_name": "Lovelace",
                 "email": "ada@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
         reviewer = facade.create_user(
             {
@@ -437,7 +482,8 @@ class TestReview(unittest.TestCase):
                 "last_name": "Hopper",
                 "email": "grace@example.com",
                 "password": "test-password",
-            }
+            },
+            is_admin=True,
         )
         place = facade.create_place(
             {

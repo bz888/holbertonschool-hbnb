@@ -1,4 +1,4 @@
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource
 from api.v1.schemas.review import (
     reviewRequestModel,
@@ -60,6 +60,7 @@ class ReviewResource(Resource):
             review_id,
             api.payload,
             current_user_id=current_user_id,
+            is_admin=get_jwt().get("is_admin", False) is True,
         )
         return {"message": "Review updated successfully"}, 200
 
@@ -74,5 +75,6 @@ class ReviewResource(Resource):
         facade.delete_review(
             review_id,
             current_user_id=current_user_id,
+            is_admin=get_jwt().get("is_admin", False) is True,
         )
         return {"message": "Review deleted successfully"}, 200

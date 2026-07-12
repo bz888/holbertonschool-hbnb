@@ -1,13 +1,9 @@
 {
   "info": {
     "_postman_id": "5dd65cf0-d878-4aa9-bca8-89eb94ddd75d",
-    "name": "HBnB API v1",
-    "description": "Import-ready collection generated from the Flask-RESTX Swagger document at /swagger.json and the api/v1 route implementations. It covers all 10 paths and 23 unique operations. Run the collection in order: Setup creates and captures related resource IDs, the resource folders exercise the API, and Cleanup removes the created data.",
-    "version": {
-      "major": 1,
-      "minor": 1,
-      "patch": 0
-    },
+    "name": "HBnB API v1 - JWT and Admin Access",
+    "description": "Run the folders in order. Before running, seed an administrator matching admin_email/admin_password. Setup logs in that administrator, creates regular users and an amenity with the admin token, logs in the regular users, and creates a place with its owner's token. The remaining folders cover public, authenticated, admin-only, ownership-bypass, and expected rejection flows.",
+    "version": {"major": 1, "minor": 2, "patch": 0},
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -16,74 +12,90 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "pm.test('Returns a successful status', function () {",
-          "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+          "const statusMatch = pm.info.requestName.match(/^\\[(\\d{3})/);",
+          "pm.test('Returns the expected status', function () {",
+          "    if (statusMatch) {",
+          "        pm.expect(pm.response.code).to.equal(Number(statusMatch[1]));",
+          "    } else {",
+          "        pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+          "    }",
           "});",
           "",
           "pm.test('Returns JSON', function () {",
           "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
-          "});"
+          "});",
+          "",
+          "if (pm.info.requestName.startsWith('[403 Admin]')) {",
+          "    pm.test('Returns the admin privilege error', function () {",
+          "        pm.expect(pm.response.json()).to.eql({error: 'Admin privileges required'});",
+          "    });",
+          "}",
+          "if (pm.info.requestName.startsWith('[403 Ownership]')) {",
+          "    pm.test('Returns the ownership error', function () {",
+          "        pm.expect(pm.response.json()).to.eql({error: 'Unauthorized action'});",
+          "    });",
+          "}",
+          "if (pm.info.requestName.startsWith('[400 Duplicate Create]')) {",
+          "    pm.test('Returns the duplicate-create email error', function () {",
+          "        pm.expect(pm.response.json()).to.eql({error: 'Email already registered'});",
+          "    });",
+          "}",
+          "if (pm.info.requestName.startsWith('[400 Duplicate Update]')) {",
+          "    pm.test('Returns the duplicate-update email error', function () {",
+          "        pm.expect(pm.response.json()).to.eql({error: 'Email already in use'});",
+          "    });",
+          "}"
         ]
       }
     }
   ],
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://127.0.0.1:8080/api/v1",
-      "type": "string"
-    },
-    {
-      "key": "swagger_url",
-      "value": "http://127.0.0.1:8080/swagger.json",
-      "type": "string"
-    },
-    {
-      "key": "user_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "reviewer_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "amenity_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "place_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "nested_review_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "review_id",
-      "value": "",
-      "type": "string"
-    }
+    {"key": "base_url", "value": "http://127.0.0.1:8080/api/v1", "type": "string"},
+    {"key": "swagger_url", "value": "http://127.0.0.1:8080/swagger.json", "type": "string"},
+    {"key": "admin_email", "value": "admin@example.com", "type": "string"},
+    {"key": "admin_password", "value": "admin-password", "type": "string"},
+    {"key": "admin_token", "value": "", "type": "string"},
+    {"key": "owner_email", "value": "", "type": "string"},
+    {"key": "owner_password", "value": "owner-password", "type": "string"},
+    {"key": "owner_token", "value": "", "type": "string"},
+    {"key": "user_id", "value": "", "type": "string"},
+    {"key": "reviewer_email", "value": "", "type": "string"},
+    {"key": "reviewer_updated_email", "value": "", "type": "string"},
+    {"key": "reviewer_password", "value": "reviewer-password", "type": "string"},
+    {"key": "reviewer_token", "value": "", "type": "string"},
+    {"key": "reviewer_id", "value": "", "type": "string"},
+    {"key": "amenity_id", "value": "", "type": "string"},
+    {"key": "place_id", "value": "", "type": "string"},
+    {"key": "nested_review_id", "value": "", "type": "string"},
+    {"key": "review_id", "value": "", "type": "string"}
   ],
   "item": [
     {
       "name": "00 - Setup (Run First)",
-      "description": "Creates the related resources required by the remaining requests and stores their IDs as collection variables.",
+      "description": "Requires an administrator already present in the application's repository. Change admin_email and admin_password if your seed uses different credentials.",
       "item": [
         {
-          "name": "Create Owner",
+          "name": "Login Admin",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = pm.variables.replaceIn('{{$guid}}');",
+                  "pm.collectionVariables.set('owner_email', `owner.${runId}@example.com`);",
+                  "pm.collectionVariables.set('reviewer_email', `reviewer.${runId}@example.com`);",
+                  "pm.collectionVariables.set('reviewer_updated_email', `reviewer.updated.${runId}@example.com`);"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('user_id', pm.response.json().id);",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('admin_token', pm.response.json().access_token);",
                   "}"
                 ]
               }
@@ -91,186 +103,192 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Ada\",\n  \"last_name\": \"Lovelace\",\n  \"email\": \"owner.{{$guid}}@example.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/auth/login",
+            "description": "Authenticates the pre-seeded administrator and stores admin_token."
+          }
+        },
+        {
+          "name": "Create Owner as Admin",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["if (pm.response.code === 201) {", "    pm.collectionVariables.set('user_id', pm.response.json().id);", "}"]}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"first_name\": \"Ada\",\n  \"last_name\": \"Lovelace\",\n  \"email\": \"{{owner_email}}\",\n  \"password\": \"{{owner_password}}\"\n}", "options": {"raw": {"language": "json"}}},
             "url": "{{base_url}}/users/",
-            "description": "POST /api/v1/users/ — creates the place owner and saves the returned ID as user_id."
+            "description": "Admin-protected POST /users/. Stores user_id."
           }
         },
         {
-          "name": "Create Reviewer",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('reviewer_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
+          "name": "Login Owner",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["if (pm.response.code === 200) {", "    pm.collectionVariables.set('owner_token', pm.response.json().access_token);", "}"]}}],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Grace\",\n  \"last_name\": \"Hopper\",\n  \"email\": \"reviewer.{{$guid}}@example.com\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{base_url}}/users/",
-            "description": "Creates a second user because an owner cannot review their own place."
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"{{owner_email}}\",\n  \"password\": \"{{owner_password}}\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/auth/login"
           }
         },
         {
-          "name": "Create Amenity",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('amenity_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
+          "name": "Create Reviewer as Admin",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["if (pm.response.code === 201) {", "    pm.collectionVariables.set('reviewer_id', pm.response.json().id);", "}"]}}],
           "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Wi-Fi\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{base_url}}/amenities/",
-            "description": "POST /api/v1/amenities/ — saves the returned ID as amenity_id."
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"first_name\": \"Grace\",\n  \"last_name\": \"Hopper\",\n  \"email\": \"{{reviewer_email}}\",\n  \"password\": \"{{reviewer_password}}\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/"
           }
         },
         {
-          "name": "Create Place",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('place_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
+          "name": "Login Reviewer",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["if (pm.response.code === 200) {", "    pm.collectionVariables.set('reviewer_token', pm.response.json().access_token);", "}"]}}],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Melbourne Apartment\",\n  \"description\": \"Central apartment near the river\",\n  \"price\": 150.0,\n  \"latitude\": -37.8136,\n  \"longitude\": 144.9631,\n  \"owner_id\": \"{{user_id}}\",\n  \"amenity_ids\": [\n    \"{{amenity_id}}\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"{{reviewer_email}}\",\n  \"password\": \"{{reviewer_password}}\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/auth/login"
+          }
+        },
+        {
+          "name": "Create Amenity as Admin",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["if (pm.response.code === 201) {", "    pm.collectionVariables.set('amenity_id', pm.response.json().id);", "}"]}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"Wi-Fi\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/amenities/"
+          }
+        },
+        {
+          "name": "Create Place as Owner",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["if (pm.response.code === 201) {", "    pm.collectionVariables.set('place_id', pm.response.json().id);", "}"]}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"title\": \"Melbourne Apartment\",\n  \"description\": \"Central apartment near the river\",\n  \"price\": 150.0,\n  \"latitude\": -37.8136,\n  \"longitude\": 144.9631,\n  \"amenity_ids\": [\"{{amenity_id}}\"]\n}", "options": {"raw": {"language": "json"}}},
             "url": "{{base_url}}/places/",
-            "description": "POST /api/v1/places/ — creates a place using the captured owner and amenity IDs."
+            "description": "JWT identity determines ownership; owner_id is intentionally omitted."
           }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Protected Resource as Admin",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/auth/protected"
+          }
+        },
+        {
+          "name": "Protected Resource as Regular User",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/auth/protected"
+          }
+        },
+        {
+          "name": "[401] Protected Resource Without Token",
+          "request": {"auth": {"type": "noauth"}, "method": "GET", "header": [], "url": "{{base_url}}/auth/protected"}
         }
       ]
     },
     {
       "name": "Users",
       "item": [
+        {"name": "List Users", "request": {"method": "GET", "header": [], "url": "{{base_url}}/users/"}},
+        {"name": "Get Owner", "request": {"method": "GET", "header": [], "url": "{{base_url}}/users/{{user_id}}"}},
+        {"name": "List Reviews Written by Reviewer", "request": {"method": "GET", "header": [], "url": "{{base_url}}/users/{{reviewer_id}}/reviews"}},
         {
-          "name": "List Users",
+          "name": "Update Own User",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/users/",
-            "description": "GET /api/v1/users/"
-          }
-        },
-        {
-          "name": "Get User",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/users/{{user_id}}",
-            "description": "GET /api/v1/users/{user_id}"
-          }
-        },
-        {
-          "name": "Update User",
-          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"first_name\": \"Augusta Ada\",\n  \"last_name\": \"Lovelace\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{base_url}}/users/{{user_id}}",
-            "description": "PUT /api/v1/users/{user_id}. Supported fields: first_name, last_name, and email."
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"first_name\": \"Augusta Ada\",\n  \"last_name\": \"Lovelace\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/{{user_id}}"
           }
         },
         {
-          "name": "List Reviews Written by User",
+          "name": "Admin Update Reviewer Protected Fields",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/users/{{reviewer_id}}/reviews",
-            "description": "GET /api/v1/users/{user_id}/reviews"
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"{{reviewer_updated_email}}\",\n  \"password\": \"updated-reviewer-password\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/{{reviewer_id}}",
+            "description": "Admin updates another user's protected email and password fields. The previously issued reviewer JWT remains valid."
+          }
+        },
+        {
+          "name": "[401] Create User Without Token",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"first_name\": \"Blocked\",\n  \"last_name\": \"User\",\n  \"email\": \"blocked.{{$guid}}@example.com\",\n  \"password\": \"test-password\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/"
+          }
+        },
+        {
+          "name": "[403 Admin] Create User as Regular User",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"first_name\": \"Blocked\",\n  \"last_name\": \"User\",\n  \"email\": \"blocked.{{$guid}}@example.com\",\n  \"password\": \"test-password\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/"
+          }
+        },
+        {
+          "name": "[403 Admin] Regular User Updates Another User",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"first_name\": \"Blocked\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/{{reviewer_id}}"
+          }
+        },
+        {
+          "name": "[403 Admin] Regular User Updates Protected Field",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"blocked.{{$guid}}@example.com\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/{{user_id}}"
+          }
+        },
+        {
+          "name": "[400 Duplicate Create] Admin Creates Duplicate Email",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"first_name\": \"Duplicate\",\n  \"last_name\": \"User\",\n  \"email\": \"{{owner_email}}\",\n  \"password\": \"test-password\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/"
+          }
+        },
+        {
+          "name": "[400 Duplicate Update] Admin Updates to Duplicate Email",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"email\": \"{{owner_email}}\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/users/{{reviewer_id}}"
           }
         }
       ]
@@ -278,136 +296,82 @@
     {
       "name": "Amenities",
       "item": [
+        {"name": "List Amenities", "request": {"method": "GET", "header": [], "url": "{{base_url}}/amenities/"}},
+        {"name": "Get Amenity", "request": {"method": "GET", "header": [], "url": "{{base_url}}/amenities/{{amenity_id}}"}},
         {
-          "name": "List Amenities",
+          "name": "Update Amenity as Admin",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/amenities/",
-            "description": "GET /api/v1/amenities/"
-          }
-        },
-        {
-          "name": "Get Amenity",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/amenities/{{amenity_id}}",
-            "description": "GET /api/v1/amenities/{amenity_id}"
-          }
-        },
-        {
-          "name": "Update Amenity",
-          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"High-speed Wi-Fi\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{base_url}}/amenities/{{amenity_id}}",
-            "description": "PUT /api/v1/amenities/{amenity_id}"
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"name\": \"High-speed Wi-Fi\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/amenities/{{amenity_id}}"
           }
+        },
+        {
+          "name": "[401] Create Amenity Without Token",
+          "request": {"auth": {"type": "noauth"}, "method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"name\": \"Blocked amenity\"\n}", "options": {"raw": {"language": "json"}}}, "url": "{{base_url}}/amenities/"}
+        },
+        {
+          "name": "[403 Admin] Create Amenity as Regular User",
+          "request": {"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]}, "method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"name\": \"Blocked amenity\"\n}", "options": {"raw": {"language": "json"}}}, "url": "{{base_url}}/amenities/"}
+        },
+        {
+          "name": "[401] Update Amenity Without Token",
+          "request": {"auth": {"type": "noauth"}, "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"name\": \"Blocked update\"\n}", "options": {"raw": {"language": "json"}}}, "url": "{{base_url}}/amenities/{{amenity_id}}"}
+        },
+        {
+          "name": "[403 Admin] Update Amenity as Regular User",
+          "request": {"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]}, "method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\n  \"name\": \"Blocked update\"\n}", "options": {"raw": {"language": "json"}}}, "url": "{{base_url}}/amenities/{{amenity_id}}"}
         }
       ]
     },
     {
       "name": "Places",
       "item": [
+        {"name": "List Places", "request": {"method": "GET", "header": [], "url": "{{base_url}}/places/"}},
+        {"name": "Get Place", "request": {"method": "GET", "header": [], "url": "{{base_url}}/places/{{place_id}}"}},
         {
-          "name": "List Places",
+          "name": "Update Place as Owner",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/places/",
-            "description": "GET /api/v1/places/"
-          }
-        },
-        {
-          "name": "Get Place",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/places/{{place_id}}",
-            "description": "GET /api/v1/places/{place_id}"
-          }
-        },
-        {
-          "name": "Update Place",
-          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated Melbourne Apartment\",\n  \"description\": \"Updated central apartment\",\n  \"price\": 175.0,\n  \"amenity_ids\": [\n    \"{{amenity_id}}\"\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{base_url}}/places/{{place_id}}",
-            "description": "PUT /api/v1/places/{place_id}. Supplying amenity_ids replaces the complete amenity collection."
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"title\": \"Owner Updated Apartment\",\n  \"price\": 175.0,\n  \"amenity_ids\": [\"{{amenity_id}}\"]\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/places/{{place_id}}"
           }
         },
         {
-          "name": "List Reviews for Place",
+          "name": "Admin Update Place Ownership Bypass",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/places/{{place_id}}/reviews",
-            "description": "GET /api/v1/places/{place_id}/reviews"
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"description\": \"Updated by an administrator\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/places/{{place_id}}"
           }
         },
         {
-          "name": "Create Review for Place",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('nested_review_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
+          "name": "[403 Ownership] Regular User Updates Another User's Place",
           "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{reviewer_token}}", "type": "string"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"title\": \"Blocked update\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/places/{{place_id}}"
+          }
+        },
+        {"name": "List Reviews for Place", "request": {"method": "GET", "header": [], "url": "{{base_url}}/places/{{place_id}}/reviews"}},
+        {
+          "name": "Create Nested Review as Reviewer",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["if (pm.response.code === 201) {", "    pm.collectionVariables.set('nested_review_id', pm.response.json().id);", "}"]}}],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{reviewer_token}}", "type": "string"}]},
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"text\": \"Great stay and excellent location\",\n  \"rating\": 5,\n  \"user_id\": \"{{reviewer_id}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"text\": \"Great stay and excellent location\",\n  \"rating\": 5\n}", "options": {"raw": {"language": "json"}}},
             "url": "{{base_url}}/places/{{place_id}}/reviews",
-            "description": "POST /api/v1/places/{place_id}/reviews. The place_id is supplied by the URL."
+            "description": "JWT identity determines review authorship; user_id is intentionally omitted."
           }
         }
       ]
@@ -415,143 +379,75 @@
     {
       "name": "Reviews",
       "item": [
+        {"name": "List Reviews", "request": {"method": "GET", "header": [], "url": "{{base_url}}/reviews/"}},
         {
-          "name": "List Reviews",
+          "name": "Create Review as Admin",
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": ["if (pm.response.code === 201) {", "    pm.collectionVariables.set('review_id', pm.response.json().id);", "}"]}}],
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/reviews/",
-            "description": "GET /api/v1/reviews/"
-          }
-        },
-        {
-          "name": "Create Review",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    pm.collectionVariables.set('review_id', pm.response.json().id);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"text\": \"Comfortable and convenient\",\n  \"rating\": 4,\n  \"place_id\": \"{{place_id}}\",\n  \"user_id\": \"{{reviewer_id}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{base_url}}/reviews/",
-            "description": "POST /api/v1/reviews/"
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"text\": \"Comfortable and convenient\",\n  \"rating\": 4,\n  \"place_id\": \"{{place_id}}\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/reviews/"
           }
         },
+        {"name": "Get Review", "request": {"method": "GET", "header": [], "url": "{{base_url}}/reviews/{{review_id}}"}},
         {
-          "name": "Get Review",
+          "name": "Update Own Review as Admin",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{base_url}}/reviews/{{review_id}}",
-            "description": "GET /api/v1/reviews/{review_id}"
-          }
-        },
-        {
-          "name": "Update Review",
-          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
             "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"text\": \"Updated review text\",\n  \"rating\": 5\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{base_url}}/reviews/{{review_id}}",
-            "description": "PUT /api/v1/reviews/{review_id}. Only text and rating can be updated."
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"text\": \"Updated review text\",\n  \"rating\": 5\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/reviews/{{review_id}}"
+          }
+        },
+        {
+          "name": "Admin Update Review Ownership Bypass",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"rating\": 4\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/reviews/{{nested_review_id}}"
+          }
+        },
+        {
+          "name": "[403 Ownership] Regular User Updates Another User's Review",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\n  \"rating\": 2\n}", "options": {"raw": {"language": "json"}}},
+            "url": "{{base_url}}/reviews/{{nested_review_id}}"
+          }
+        },
+        {
+          "name": "[403 Ownership] Regular User Deletes Another User's Review",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{owner_token}}", "type": "string"}]},
+            "method": "DELETE",
+            "header": [],
+            "url": "{{base_url}}/reviews/{{nested_review_id}}"
           }
         }
       ]
     },
     {
       "name": "99 - Cleanup (Run Last)",
-      "description": "Exercises every DELETE operation after the dependent requests have completed.",
       "item": [
         {
-          "name": "Delete Review",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/reviews/{{review_id}}",
-            "description": "DELETE /api/v1/reviews/{review_id}"
-          }
+          "name": "Delete Admin's Review",
+          "request": {"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]}, "method": "DELETE", "header": [], "url": "{{base_url}}/reviews/{{review_id}}"}
         },
         {
-          "name": "Delete Nested Review",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/reviews/{{nested_review_id}}",
-            "description": "Deletes the review created through POST /api/v1/places/{place_id}/reviews."
-          }
+          "name": "Admin Delete Review Ownership Bypass",
+          "request": {"auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{admin_token}}", "type": "string"}]}, "method": "DELETE", "header": [], "url": "{{base_url}}/reviews/{{nested_review_id}}"}
         },
-        {
-          "name": "Delete Place",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/places/{{place_id}}",
-            "description": "DELETE /api/v1/places/{place_id}"
-          }
-        },
-        {
-          "name": "Delete Amenity",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/amenities/{{amenity_id}}",
-            "description": "DELETE /api/v1/amenities/{amenity_id}"
-          }
-        },
-        {
-          "name": "Delete Owner",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/users/{{user_id}}",
-            "description": "DELETE /api/v1/users/{user_id}"
-          }
-        },
-        {
-          "name": "Delete Reviewer",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": "{{base_url}}/users/{{reviewer_id}}",
-            "description": "Deletes the second user created by the setup workflow."
-          }
-        }
+        {"name": "Delete Place", "request": {"method": "DELETE", "header": [], "url": "{{base_url}}/places/{{place_id}}"}},
+        {"name": "Delete Amenity", "request": {"method": "DELETE", "header": [], "url": "{{base_url}}/amenities/{{amenity_id}}"}},
+        {"name": "Delete Owner", "request": {"method": "DELETE", "header": [], "url": "{{base_url}}/users/{{user_id}}"}},
+        {"name": "Delete Reviewer", "request": {"method": "DELETE", "header": [], "url": "{{base_url}}/users/{{reviewer_id}}"}}
       ]
     }
   ]
