@@ -1,14 +1,22 @@
 [run]
 branch = True
-source = .
+relative_files = True
+source =
+    api
+    models
+    persistence
+    services
+    utils
+    validators
 omit =
     tests/*
-    venv/*
+    .venv/*
     run.py
 
 [report]
 show_missing = True
 skip_covered = False
+skip_empty = False
 exclude_lines =
     pragma: no cover
     if __name__ == .__main__.:
