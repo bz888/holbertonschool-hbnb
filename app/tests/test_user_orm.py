@@ -1,38 +1,34 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+from flask import Flask
 
-from models.base_model import Base
+from extensions import db, bcrypt
 from models.user import User
 
 
-engine = create_engine(
-    "sqlite:///:memory:",
-    echo=True,
-)
+app = Flask(__name__)
 
-Base.metadata.create_all(engine)
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+
+db.init_app(app)
+bcrypt.init_app(app)
 
 
-with Session(engine) as session:
+with app.app_context():
+
+    db.create_all()
+
     user = User(
-        first_name=" John ",
-        last_name=" Smith ",
-        email=" JOHN@EXAMPLE.COM ",
+        first_name="John",
+        last_name="Smith",
+        email="john@example.com"
     )
 
-    user.hash_password("mypassword")
+    user.hash_password("password123")
 
-    session.add(user)
-    session.commit()
+    db.session.add(user)
+    db.session.commit()
 
     print("ID:", user.id)
     print("Name:", user.first_name, user.last_name)
     print("Email:", user.email)
-    print("Password:", user.password)
-    print("Created:", user.created_at)
-    print("Updated:", user.updated_at)
-
-    print(
-        "Password valid:",
-        user.verify_password("mypassword")
-    )
+    print("Password valid:",
+          user.verify_password("password123"))

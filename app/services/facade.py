@@ -17,7 +17,8 @@ from models.amenity import Amenity
 from models.place import Place
 from models.review import Review
 from models.user import User
-from persistence.repository import InMemoryRepository
+from persistence.repository import InMemoryRepository, SQLAlchemyRepository
+from persistence.user_repository import UserRepository
 
 # validators
 from validators.fields import validate_allowed_fields
@@ -46,7 +47,8 @@ class HBnBFacade:
     """Coordinate models and in-memory repositories."""
 
     def __init__(self):
-        self.user_repo = InMemoryRepository()
+        self.user_repo = UserRepository()
+
         self.place_repo = InMemoryRepository()
         self.review_repo = InMemoryRepository()
         self.amenity_repo = InMemoryRepository()

@@ -1,6 +1,25 @@
 from .base_model import BaseModel
 
 
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+
+# class Review(BaseModel):
+
+
+#     text: Mapped[str] = mapped_column(
+#         String(50),
+#         nullable=False,
+#     )
+
+#     text: Mapped[str] = mapped_column(
+#         String(50),
+#         nullable=False,
+#     )
+
+
+
+
 class Review(BaseModel):
     """Review model."""
 

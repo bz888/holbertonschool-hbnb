@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from extensions import db
 
 
 class Repository(ABC):
@@ -93,3 +94,52 @@ class InMemoryRepository(Repository):
 
     def clear(self):
         self._storage.clear()
+
+
+class SQLAlchemyRepository(Repository):
+    def __init__(self, model):
+        self.model = model
+
+    def add(self, obj):
+        db.session.add(obj)
+        db.session.commit()
+        return obj
+
+    def get(self, obj_id):
+        return db.session.get(self.model, obj_id)
+
+    def get_all(self):
+        return self.model.query.all()
+
+    def find_one(self, **filters):
+        return self.model.query.filter_by(**filters).first()
+
+    def find_all(self, **filters):
+        return self.model.query.filter_by(**filters).all()
+
+    def update(self, obj_id, data):
+        obj = self.get(obj_id)
+        if obj is None:
+            return None
+
+        for key, value in data.items():
+            setattr(obj, key, value)
+
+        db.session.commit()
+        return obj
+
+    def delete(self, obj_id):
+        obj = self.get(obj_id)
+        if obj is None:
+            return None
+
+        db.session.delete(obj)
+        db.session.commit()
+        return obj
+
+    def get_by_attribute(self, attr_name, attr_value):
+        return self.find_one(**{attr_name: attr_value})
+
+    def clear(self):
+        db.session.query(self.model).delete()
+        db.session.commit()

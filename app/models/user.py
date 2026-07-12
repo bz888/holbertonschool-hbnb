@@ -1,99 +1,115 @@
 import re
 
-from extensions import bcrypt
+from extensions import bcrypt, db
 from .base_model import BaseModel
 
-from sqlalchemy import Boolean, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
-
+from sqlalchemy.orm import validates
 
 class User(BaseModel):
     """User model."""
 
-    __tablename__ = "user"
+    __tablename__ = 'users'
 
     EMAIL_PATTERN = re.compile(
         r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
     )
 
-    first_name: Mapped[str] = mapped_column(
-        String(50),
+    first_name = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    last_name = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    email = db.Column(
+        db.String(120),
         nullable=False,
+        unique=True
     )
 
-    last_name: Mapped[str] = mapped_column(
-        String(50),
-        nullable=False,
+    password = db.Column(
+        db.String(128),
+        nullable=False
     )
 
-    email: Mapped[str] = mapped_column(
-        String(120),
-        unique=True,
-        nullable=False,
+    is_admin = db.Column(
+        db.Boolean,
+        default=False
     )
 
-    password: Mapped[str | None] = mapped_column(
-        String(255),
-        nullable=True,
+    is_active = db.Column(
+    db.Boolean,
+    default=True
     )
 
-    is_admin: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-    )
+    # places = db.relationship(
+    # "Place",
+    # back_populates="owner",
+    # cascade="all, delete-orphan"
+    # )
 
-    is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True,
-    )
+    # reviews = db.relationship(
+    #     "Review",
+    #     back_populates="user",
+    #     cascade="all, delete-orphan"
+    # )
 
-    places: Mapped[list["Place"]] = relationship(
-        back_populates="owner",
-        cascade="all, delete-orphan",
-    )
+    @validates("first_name")
+    def validate_first_name(self, key, value):
+        return self._validate_name(value, "First name")
 
-    reviews: Mapped[list["Review"]] = relationship(
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
-
-    @validates("first_name", "last_name")
-    def validate_name(self, key, value):
-        if not isinstance(value, str):
-            raise ValueError(f"{key} must be a string")
-
-        value = value.strip()
-
-        if not value:
-            raise ValueError(f"{key} is required")
-
-        if len(value) > 50:
-            raise ValueError(f"{key} must be 50 characters or fewer")
-
-        return value
+    @validates("last_name")
+    def validate_last_name(self, key, value):
+        return self._validate_name(value, "Last name")
 
     @validates("email")
     def validate_email(self, key, value):
+        return self.normalize_email(value)
+
+    @classmethod
+    def normalize_email(cls, value):
+        """Validate and normalize an email address."""
         if not isinstance(value, str):
             raise ValueError("Email must be a string")
 
-        value = value.strip().lower()
+        email = value.strip().lower()
+        if not cls.EMAIL_PATTERN.fullmatch(email):
+            raise ValueError("Email must be a valid email address")
 
-        if not self.EMAIL_PATTERN.fullmatch(value):
-            raise ValueError("Invalid email")
+        return email
 
-        return value
+    @staticmethod
+    def _validate_name(value, field_name):
+        if not isinstance(value, str):
+            raise ValueError(f"{field_name} must be a string")
 
-    def add_place(self, place):
-        self.places.append(place)
+        name = value.strip()
+        if not name:
+            raise ValueError(f"{field_name} is required")
+        if len(name) > 50:
+            raise ValueError(
+                f"{field_name} must be 50 characters or fewer"
+            )
 
-    def add_review(self, review):
-        self.reviews.append(review)
+        return name
+
+    # def add_place(self, place):
+    #     """Add a place owned by the user."""
+    #     self.places.append(place)
+
+    # def add_review(self, review):
+    #     """Add a review written by the user."""
+    #     self.reviews.append(review)
 
     def hash_password(self, password):
+        """Hashes the password before storing it."""
         self.password = bcrypt.generate_password_hash(password).decode("utf-8")
 
     def verify_password(self, password):
+        """Verifies if the provided password matches the hashed password."""
         return bcrypt.check_password_hash(self.password, password)
 
     def to_dict(self):

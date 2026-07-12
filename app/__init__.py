@@ -1,8 +1,9 @@
 from flask import Flask
 from flask_restx import Api
 
+
 import config
-from extensions import bcrypt, jwt
+from extensions import bcrypt, jwt, db
 
 from api.errors import register_error_handlers
 from api.v1.amenities import api as amenities_ns
@@ -35,9 +36,12 @@ def seed_admin(app):
     )
 
 
+
 def create_app(config_class=config.DevelopmentConfig):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    db.init_app(app)
     bcrypt.init_app(app)
     jwt.init_app(app)
 
