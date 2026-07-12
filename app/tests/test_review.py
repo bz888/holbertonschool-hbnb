@@ -8,6 +8,7 @@ from models.place import Place
 from models.review import Review
 from models.user import User
 from services.facade import HBnBFacade
+from tests.orm_test_case import ORMTestCase
 from utils.errors.place import PlaceNotFound, UnauthorizedAction
 from utils.errors.review import (
     DuplicateReview,
@@ -17,8 +18,9 @@ from utils.errors.review import (
 from utils.errors.user import UserNotFound
 
 
-class TestReview(unittest.TestCase):
+class TestReview(ORMTestCase):
     def setUp(self):
+        super().setUp()
         self.user = User("Ada", "Lovelace", "ada@example.com")
         self.place = Place("Flat", "Nice flat", 100.0, 0.0, 0.0, self.user)
 
@@ -226,7 +228,7 @@ class TestReview(unittest.TestCase):
         self.assertIs(review.user, reviewer)
         self.assertIs(review.place, place)
 
-    def test_facade_validates_review_relationships_in_memory(self):
+    def test_facade_validates_review_relationships_in_database(self):
         facade = HBnBFacade()
 
         with self.assertRaises(PlaceNotFound):
@@ -385,7 +387,7 @@ class TestReview(unittest.TestCase):
             [review],
         )
 
-    def test_deleting_place_preserves_review(self):
+    def test_deleting_place_cascades_to_review(self):
         facade, _, _, place, review = self._create_review(
             facade=HBnBFacade()
         )
@@ -393,9 +395,9 @@ class TestReview(unittest.TestCase):
         facade.delete_place(place.id)
 
         self.assertIsNone(facade.place_repo.get(place.id))
-        self.assertIs(facade.get_review(review.id), review)
-        self.assertIn(review, facade.get_all_reviews())
-        self.assertEqual(review.to_dict()["place_id"], place.id)
+        with self.assertRaises(ReviewNotFound):
+            facade.get_review(review.id)
+        self.assertNotIn(review, facade.get_all_reviews())
         with self.assertRaises(PlaceNotFound):
             facade.get_reviews_by_place(place.id)
 

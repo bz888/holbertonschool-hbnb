@@ -31,16 +31,14 @@ To display the stored coverage report:
 Refer to `test/regression_test_evidence` for all recorded testing for all routes and all status codes.
 
 
-## Current Relationship Shortfalls
+## SQLAlchemy Relationships
 
-### Loose Relationship References
+Users, places, reviews, and amenities use bidirectional SQLAlchemy
+relationships. All primary and foreign keys are UUID strings stored as
+`String(36)`. Deleting a user or place cascades to dependent records, while
+soft-deleting a user preserves their reviews and deactivates their places.
 
-Hard deletion can leave stale in-memory references between users, places,
-amenities, and reviews. The `/places/<place_id>/reviews` route currently
-supports only `GET` and `POST`; a future `PUT` route could support replacing a
-place's complete review collection.
-
-### Full Replacement with Place PUT
+### Place Amenity Replacement
 
 Updating `amenity_ids` through `PUT /places/<place_id>` replaces the place's
 entire amenity collection. For example, an existing Wi-Fi amenity is removed

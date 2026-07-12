@@ -1,64 +1,93 @@
 import re
 
-from extensions import bcrypt
+from extensions import bcrypt, db
 from .base_model import BaseModel
+
+from sqlalchemy.orm import validates
 
 
 class User(BaseModel):
     """User model."""
 
+    __tablename__ = 'users'
+
     EMAIL_PATTERN = re.compile(
         r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
     )
 
+    first_name = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    last_name = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    email = db.Column(
+        db.String(120),
+        nullable=False,
+        unique=True
+    )
+
+    password = db.Column(
+        db.String(128),
+        nullable=False
+    )
+
+    is_admin = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        default=True,
+        nullable=False,
+    )
+
+    places = db.relationship(
+        "Place",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
+
+    reviews = db.relationship(
+        "Review",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
     def __init__(
         self,
-        first_name,
-        last_name,
-        email,
-        password=None,
-        is_admin=False,
-        is_active=True,
+        first_name=None,
+        last_name=None,
+        email=None,
+        **kwargs,
     ):
-        super().__init__()
-        self.first_name = first_name
-        self.last_name = last_name
-        self.email = email
-        self.password = password
-        self.is_admin = is_admin
-        self.is_active = is_active
-        self.places = []
-        self.reviews = []
-
-    @property
-    def first_name(self):
-        return self._first_name
-
-    @first_name.setter
-    def first_name(self, value):
-        self._first_name = self._validate_name(
-            value,
-            "First name",
+        """Initialize a user with positional or keyword domain fields."""
+        kwargs.setdefault("is_admin", False)
+        kwargs.setdefault("is_active", True)
+        super().__init__(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            **kwargs,
         )
 
-    @property
-    def last_name(self):
-        return self._last_name
+    @validates("first_name")
+    def validate_first_name(self, key, value):
+        return self._validate_name(value, "First name")
 
-    @last_name.setter
-    def last_name(self, value):
-        self._last_name = self._validate_name(
-            value,
-            "Last name",
-        )
+    @validates("last_name")
+    def validate_last_name(self, key, value):
+        return self._validate_name(value, "Last name")
 
-    @property
-    def email(self):
-        return self._email
-
-    @email.setter
-    def email(self, value):
-        self._email = self.normalize_email(value)
+    @validates("email")
+    def validate_email(self, key, value):
+        return self.normalize_email(value)
 
     @classmethod
     def normalize_email(cls, value):
@@ -88,12 +117,14 @@ class User(BaseModel):
         return name
 
     def add_place(self, place):
-        """Add a place owned by the user."""
-        self.places.append(place)
+        """Associate an owned place with this user."""
+        if place not in self.places:
+            self.places.append(place)
 
     def add_review(self, review):
-        """Add a review written by the user."""
-        self.reviews.append(review)
+        """Associate an authored review with this user."""
+        if review not in self.reviews:
+            self.reviews.append(review)
 
     def hash_password(self, password):
         """Hashes the password before storing it."""

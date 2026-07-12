@@ -6,15 +6,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from models.amenity import Amenity
 from models.place import Place
+from models.review import Review
 from models.user import User
 from services.facade import HBnBFacade
+from tests.orm_test_case import ORMTestCase
 from utils.errors.amenity import AmenityNotFound
 from utils.errors.place import PlaceNotFound, UnauthorizedAction
 from utils.errors.user import UserNotFound
 
 
-class TestPlace(unittest.TestCase):
+class TestPlace(ORMTestCase):
     def setUp(self):
+        super().setUp()
         self.owner = User("Ada", "Lovelace", "ada@example.com")
 
     def _create_facade_place(self, amenity_names=()):
@@ -225,7 +228,8 @@ class TestPlace(unittest.TestCase):
 
     def test_add_review(self):
         place = Place("Flat", "Nice flat", 100.0, 0.0, 0.0, self.owner)
-        review = object()
+        reviewer = User("Grace", "Hopper", "grace@example.com")
+        review = Review("Great", 5, place, reviewer)
 
         place.add_review(review)
 
@@ -269,7 +273,7 @@ class TestPlace(unittest.TestCase):
             },
         )
 
-    def test_facade_validates_owner_exists_in_memory(self):
+    def test_facade_validates_owner_exists_in_database(self):
         facade = HBnBFacade()
 
         with self.assertRaises(UserNotFound):
@@ -402,7 +406,7 @@ class TestPlace(unittest.TestCase):
             is_admin=False,
         )
 
-        self.assertEqual(place.amenities, [pool, parking])
+        self.assertCountEqual(place.amenities, [pool, parking])
         self.assertNotIn(original[0], place.amenities)
 
         facade.update_place(

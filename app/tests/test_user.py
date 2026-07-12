@@ -5,7 +5,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from models.user import User
+from models.place import Place
+from models.review import Review
 from services.facade import HBnBFacade
+from tests.orm_test_case import ORMTestCase
 from utils.errors.user import (
     AdminPrivilegesRequired,
     EmailAlreadyInUse,
@@ -15,7 +18,7 @@ from utils.errors.user import (
 )
 
 
-class TestUser(unittest.TestCase):
+class TestUser(ORMTestCase):
     def _create_facade_user(
         self,
         facade=None,
@@ -219,7 +222,7 @@ class TestUser(unittest.TestCase):
 
     def test_add_place(self):
         user = User("Ada", "Lovelace", "ada@example.com")
-        place = object()
+        place = Place("Flat", "", 100, 0, 0, user)
 
         user.add_place(place)
 
@@ -227,13 +230,14 @@ class TestUser(unittest.TestCase):
 
     def test_add_review(self):
         user = User("Ada", "Lovelace", "ada@example.com")
-        review = object()
+        place = Place("Flat", "", 100, 0, 0, user)
+        review = Review("Great", 5, place, user)
 
         user.add_review(review)
 
         self.assertEqual(user.reviews, [review])
 
-    def test_facade_enforces_unique_email_in_memory(self):
+    def test_facade_enforces_unique_email_in_database(self):
         facade = HBnBFacade()
         facade.create_user(
             {
