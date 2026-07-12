@@ -1,0 +1,45 @@
+```mermaid
+erDiagram
+    USER ||--o{ PLACE : owns
+    USER ||--o{ REVIEW : writes
+    PLACE ||--o{ REVIEW : receives
+    PLACE ||--o{ PLACE_AMENITY : "has"
+    AMENITY ||--o{ PLACE_AMENITY : "belongs to"
+
+    USER {
+        char_36 id PK
+        string first_name
+        string last_name
+        string email UK
+        string password
+        boolean is_admin
+    }
+
+    PLACE {
+        char_36 id PK
+        string title
+        string description
+        decimal price
+        float latitude
+        float longitude
+        char_36 owner_id FK
+    }
+
+    REVIEW {
+        char_36 id PK
+        string text
+        int rating
+        char_36 user_id FK
+        char_36 place_id FK
+    }
+
+    AMENITY {
+        char_36 id PK
+        string name UK
+    }
+
+    PLACE_AMENITY {
+        char_36 place_id PK, FK
+        char_36 amenity_id PK, FK
+    }
+```
