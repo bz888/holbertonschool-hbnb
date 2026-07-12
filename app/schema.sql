@@ -84,7 +84,7 @@ CREATE TABLE amenities (
 -- ---------------------------------------------------------------
 CREATE TABLE place_amenities (
     place_id    CHAR(36) NOT NULL,
-    amenity_id  CHAR(36) NOT NULL,
+    amenities_id  CHAR(36) NOT NULL,
     PRIMARY KEY (place_id, amenities_id),
     CONSTRAINT fk_place_amenities_place
         FOREIGN KEY (place_id) REFERENCES places(id)
