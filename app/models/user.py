@@ -3,13 +3,68 @@ import re
 from extensions import bcrypt
 from .base_model import BaseModel
 
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import validates
+
 
 class User(BaseModel):
     """User model."""
-
+    __tablename__ = "user"
+    
     EMAIL_PATTERN = re.compile(
         r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
     )
+
+    first_name: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+    
+    last_name: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )
+
+    email: Mapped[str] = mapped_column(
+        String(120),
+        unique=True,
+        nullable=False,
+    )
+
+    password: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+    )
+
+    places: Mapped[list["Place"]] = relationship(
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
+
+    reviews: Mapped[list["Review"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    @validates("email")
+    def validate_email(self, key, value):
+        value = value.strip().lower()
+
+        if not self.EMAIL_PATTERN.fullmatch(value):
+            raise ValueError("Invalid email")
+
+        return value
 
     def __init__(
         self,
