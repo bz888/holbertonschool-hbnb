@@ -19,12 +19,9 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = (
-        "sqlite:///" + os.path.join(
-            basedir,
-            "..",
-            "development.db"
-        )
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        "DATABASE_URL",
+        "sqlite:///" + os.path.join(basedir, "..", "development.db")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

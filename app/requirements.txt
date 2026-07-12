@@ -5,3 +5,5 @@ flask-bcrypt
 flask-jwt-extended
 sqlalchemy
 flask-sqlalchemy
+pymysql
+gunicorn

@@ -1,0 +1,12 @@
+.git
+.venv
+__pycache__
+*.py[cod]
+.coverage
+coverage.xml
+htmlcov
+data/mysql
+data/sqlite
+test_.db
+development.db
+

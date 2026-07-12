@@ -1,0 +1,5 @@
+.env
+data/mysql/*
+!data/mysql/.gitkeep
+data/sqlite/*
+!data/sqlite/.gitkeep
