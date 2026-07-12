@@ -1,7 +1,7 @@
 # HBnB — Database ER Diagram
 
 This diagram documents the database schema defined in
-`../schema.sql`. It mirrors the `User`, `Place`,
+`schema.sql`. It mirrors the `User`, `Place`,
 `Review`, and `Amenity` models in `app/models/`, plus the `place_amenity`
 join table used for the many-to-many place/amenity relationship.
 
