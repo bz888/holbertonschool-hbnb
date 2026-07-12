@@ -1,9 +1,3 @@
--- 2-seed.sql
--- Initial data for the HBnB database. Run after 1-schema.sql.
-
--- Fixed administrator account.
--- Password hash below is bcrypt('admin1234'); never store the
--- plaintext password in this script.
 INSERT INTO users (id, first_name, last_name, email, password, is_admin)
 VALUES (
     '36c9050e-ddd3-4c3b-9731-9f487208bbc1',
