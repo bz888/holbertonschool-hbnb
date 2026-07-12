@@ -80,9 +80,9 @@ CREATE TABLE amenities (
 );
 
 -- ---------------------------------------------------------------
--- place_amenity
+-- place_amenities
 -- ---------------------------------------------------------------
-CREATE TABLE place_amenity (
+CREATE TABLE place_amenities (
     place_id    CHAR(36) NOT NULL,
     amenity_id  CHAR(36) NOT NULL,
     PRIMARY KEY (place_id, amenity_id),
