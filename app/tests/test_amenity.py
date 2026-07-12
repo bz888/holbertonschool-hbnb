@@ -6,11 +6,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from models.amenity import Amenity
 from services.facade import HBnBFacade
+from tests.orm_test_case import ORMTestCase
 from utils.errors.amenity import AmenityNotFound
 from utils.errors.user import AdminPrivilegesRequired
 
 
-class TestAmenity(unittest.TestCase):
+class TestAmenity(ORMTestCase):
     def test_create_valid_amenity(self):
         amenity = Amenity("Wi-Fi")
 

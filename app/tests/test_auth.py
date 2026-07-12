@@ -12,6 +12,7 @@ try:
     from api.v1.auth import Login, ProtectedResource
     from services import facade
     from services.facade import HBnBFacade
+    from tests.orm_test_case import ORMTestCase
     from utils.errors.user import InvalidCredentials
 except ModuleNotFoundError as error:
     if error.name not in {
@@ -34,8 +35,9 @@ except ModuleNotFoundError as error:
     create_app is None,
     "Flask dependencies are not installed",
 )
-class TestAuthUnit(unittest.TestCase):
+class TestAuthUnit(ORMTestCase):
     def setUp(self):
+        super().setUp()
         self.request_app = Flask(__name__)
 
     def test_login_returns_token_with_user_identity_and_admin_claim(self):
@@ -113,20 +115,32 @@ class TestAuthUnit(unittest.TestCase):
 )
 class TestAuthIntegration(unittest.TestCase):
     def setUp(self):
-        for repository in (
-            facade.user_repo,
-            facade.place_repo,
-            facade.review_repo,
-            facade.amenity_repo,
-        ):
-            repository.clear()
+        class TestConfig:
+            TESTING = True
+            SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+            SQLALCHEMY_TRACK_MODIFICATIONS = False
+            JWT_SECRET_KEY = "test-secret-key-with-at-least-32-characters"
+            SEED_ADMIN = True
+            ADMIN_FIRST_NAME = "Admin"
+            ADMIN_LAST_NAME = "User"
+            ADMIN_EMAIL = "admin@example.com"
+            ADMIN_PASSWORD = "admin-password"
+            ERROR_INCLUDE_MESSAGE = False
+            RESTX_ERROR_404_HELP = False
 
-        self.app = create_app()
-        self.app.config["TESTING"] = True
-        self.app.config["JWT_SECRET_KEY"] = (
-            "test-secret-key-with-at-least-32-characters"
-        )
+        self.config_class = TestConfig
+        self.app = create_app(TestConfig)
+        self.app_context = self.app.app_context()
+        self.app_context.push()
         self.client = self.app.test_client()
+
+    def tearDown(self):
+        from extensions import db
+
+        db.session.remove()
+        db.drop_all()
+        db.engine.dispose()
+        self.app_context.pop()
 
     def test_app_creation_seeds_one_admin_idempotently(self):
         admin = facade.get_user_by_email("admin@example.com")
@@ -135,7 +149,7 @@ class TestAuthIntegration(unittest.TestCase):
         self.assertTrue(admin.is_admin)
         self.assertTrue(admin.verify_password("admin-password"))
 
-        create_app()
+        create_app(self.config_class)
         matching_admins = [
             user
             for user in facade.get_all_users()
@@ -144,18 +158,16 @@ class TestAuthIntegration(unittest.TestCase):
         self.assertEqual(len(matching_admins), 1)
 
     def _create_user(self, email="auth@example.com", is_admin=False):
-        with self.app.app_context():
-            user = facade.create_user(
-                {
+        user = facade.create_user(
+            {
                 "first_name": "Auth",
                 "last_name": "User",
                 "email": email,
                 "password": "test-password",
                 "is_admin": is_admin,
-                },
-                is_admin=True,
-            )
-        user.is_admin = is_admin
+            },
+            is_admin=True,
+        )
 
         return {"id": user.id}
 

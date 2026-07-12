@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+
+from sqlalchemy import select
+
 from extensions import db
 
 
@@ -36,96 +39,47 @@ class Repository(ABC):
         pass
 
 
-# class InMemoryRepository(Repository):
-#     """Simple in-memory persistence repository."""
-
-#     def __init__(self):
-#         self._storage = {}
-
-#     def add(self, obj):
-#         self._storage[obj.id] = obj
-#         return obj
-
-#     def get(self, obj_id):
-#         return self._storage.get(obj_id)
-
-#     def get_all(self):
-#         return list(self._storage.values())
-
-#     def find_one(self, **filters):
-#         """Return the first object matching every supplied filter."""
-#         return next(
-#             (
-#                 obj
-#                 for obj in self._storage.values()
-#                 if self._matches(obj, filters)
-#             ),
-#             None,
-#         )
-
-#     def find_all(self, **filters):
-#         """Return all objects matching every supplied filter."""
-#         return [
-#             obj
-#             for obj in self._storage.values()
-#             if self._matches(obj, filters)
-#         ]
-
-#     @staticmethod
-#     def _matches(obj, filters):
-#         return all(
-#             hasattr(obj, attr_name)
-#             and getattr(obj, attr_name) == attr_value
-#             for attr_name, attr_value in filters.items()
-#         )
-
-#     def update(self, obj_id, data):
-#         obj = self.get(obj_id)
-#         if obj is None:
-#             return None
-#         obj.update(data)
-#         return obj
-
-#     def delete(self, obj_id):
-#         return self._storage.pop(obj_id, None)
-
-#     def get_by_attribute(self, attr_name, attr_value):
-#         return self.find_one(**{attr_name: attr_value})
-
-#     def clear(self):
-#         self._storage.clear()
-
-
 class SQLAlchemyRepository(Repository):
+    """Generic repository backed by the active SQLAlchemy session."""
+
     def __init__(self, model):
         self.model = model
 
     def add(self, obj):
-        db.session.add(obj)
-        db.session.commit()
+        try:
+            db.session.add(obj)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
         return obj
 
     def get(self, obj_id):
         return db.session.get(self.model, obj_id)
 
     def get_all(self):
-        return self.model.query.all()
+        return list(db.session.scalars(select(self.model)).all())
 
     def find_one(self, **filters):
-        return self.model.query.filter_by(**filters).first()
+        statement = select(self.model).filter_by(**filters).limit(1)
+        return db.session.scalar(statement)
 
     def find_all(self, **filters):
-        return self.model.query.filter_by(**filters).all()
+        statement = select(self.model).filter_by(**filters)
+        return list(db.session.scalars(statement).all())
 
     def update(self, obj_id, data):
         obj = self.get(obj_id)
         if obj is None:
             return None
 
-        for key, value in data.items():
-            setattr(obj, key, value)
-
-        db.session.commit()
+        try:
+            for key, value in data.items():
+                setattr(obj, key, value)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
         return obj
 
     def delete(self, obj_id):
@@ -133,13 +87,23 @@ class SQLAlchemyRepository(Repository):
         if obj is None:
             return None
 
-        db.session.delete(obj)
-        db.session.commit()
+        try:
+            db.session.delete(obj)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
         return obj
 
     def get_by_attribute(self, attr_name, attr_value):
         return self.find_one(**{attr_name: attr_value})
 
     def clear(self):
-        db.session.query(self.model).delete()
-        db.session.commit()
+        """Delete all model rows while honoring ORM relationship cascades."""
+        try:
+            for obj in self.get_all():
+                db.session.delete(obj)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise

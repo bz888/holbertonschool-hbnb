@@ -46,6 +46,11 @@ def create_app(config_class=config.DevelopmentConfig):
     jwt.init_app(app)
 
     with app.app_context():
+        # The admin seed queries the users table, so initialise the schema
+        # before attempting to read from it on a fresh installation.
+        db.create_all()
+        print("Database tables created:")
+        print(db.metadata.tables.keys())
         seed_admin(app)
 
     api = Api(app, version='1.0', title='HBnB API', description='HBnB Application API', doc='/api/v1/')

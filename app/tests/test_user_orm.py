@@ -1,34 +1,19 @@
-from flask import Flask
-
-from extensions import db, bcrypt
+from extensions import db
 from models.user import User
+from tests.orm_test_case import ORMTestCase
 
 
-app = Flask(__name__)
+class TestUserORM(ORMTestCase):
+    def test_user_round_trip_and_password_verification(self):
+        user = User(
+            first_name="John",
+            last_name="Smith",
+            email="john@example.com",
+        )
+        user.hash_password("password123")
+        db.session.add(user)
+        db.session.commit()
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
-
-db.init_app(app)
-bcrypt.init_app(app)
-
-
-with app.app_context():
-
-    db.create_all()
-
-    user = User(
-        first_name="John",
-        last_name="Smith",
-        email="john@example.com"
-    )
-
-    user.hash_password("password123")
-
-    db.session.add(user)
-    db.session.commit()
-
-    print("ID:", user.id)
-    print("Name:", user.first_name, user.last_name)
-    print("Email:", user.email)
-    print("Password valid:",
-          user.verify_password("password123"))
+        stored_user = db.session.get(User, user.id)
+        self.assertEqual(stored_user.email, "john@example.com")
+        self.assertTrue(stored_user.verify_password("password123"))

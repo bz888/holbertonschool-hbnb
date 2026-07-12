@@ -4,6 +4,23 @@ from extensions import db
 from sqlalchemy.orm import validates
 
 
+place_amenities = db.Table(
+    "place_amenities",
+    db.Column(
+        "place_id",
+        db.String(36),
+        db.ForeignKey("places.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    db.Column(
+        "amenity_id",
+        db.String(36),
+        db.ForeignKey("amenities.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+
 class Place(BaseModel):
     """Place model."""
 
@@ -37,30 +54,58 @@ class Place(BaseModel):
     is_active = db.Column(
         db.Boolean,
         default=True,
-    )
-
-    owner_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
         nullable=False,
     )
 
-    # owner = db.relationship(
-    #     "User",
-    #     back_populates="places",
-    # )
+    owner_id = db.Column(
+        db.String(36),
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
-    # reviews = db.relationship(
-    #     "Review",
-    #     back_populates="place",
-    #     cascade="all, delete-orphan",
-    # )
+    owner = db.relationship(
+        "User",
+        back_populates="places",
+    )
 
-    # amenities = db.relationship(
-    #     "Amenity",
-    #     secondary="place_amenities",
-    #     back_populates="places",
-    # )
+    reviews = db.relationship(
+        "Review",
+        back_populates="place",
+        cascade="all, delete-orphan",
+    )
+
+    amenities = db.relationship(
+        "Amenity",
+        secondary=place_amenities,
+        back_populates="places",
+    )
+
+    def __init__(
+        self,
+        title=None,
+        description="",
+        price=None,
+        latitude=None,
+        longitude=None,
+        owner=None,
+        **kwargs,
+    ):
+        """Initialize a place with its owning user relationship."""
+        from .user import User
+
+        if not isinstance(owner, User):
+            raise ValueError("Place owner must be a User")
+
+        kwargs.setdefault("is_active", True)
+        super().__init__(
+            title=title,
+            description=description,
+            price=price,
+            latitude=latitude,
+            longitude=longitude,
+            owner=owner,
+            **kwargs,
+        )
 
     @validates("title")
     def validate_title(self, key, value):
@@ -91,6 +136,16 @@ class Place(BaseModel):
             )
 
         return float(value)
+
+    def add_review(self, review):
+        """Associate a review with this place."""
+        if review not in self.reviews:
+            self.reviews.append(review)
+
+    def add_amenity(self, amenity):
+        """Associate an amenity with this place."""
+        if amenity not in self.amenities:
+            self.amenities.append(amenity)
 
     @validates("latitude")
     def validate_latitude(self, key, value):
@@ -130,6 +185,10 @@ class Place(BaseModel):
         return float(value)
 
     def to_dict(self):
+        owner_id = self.owner_id
+        if owner_id is None and self.owner is not None:
+            owner_id = self.owner.id
+
         return {
             "id": self.id,
             "title": self.title,
@@ -137,7 +196,7 @@ class Place(BaseModel):
             "price": self.price,
             "latitude": self.latitude,
             "longitude": self.longitude,
-            "owner_id": self.owner_id,
+            "owner_id": owner_id,
             "is_active": self.is_active,
             "amenities": [amenity.id for amenity in self.amenities],
             "created_at": self.created_at.isoformat(),

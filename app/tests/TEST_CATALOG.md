@@ -5,8 +5,8 @@ directory and summarizes the behavior each one verifies.
 
 Current suite:
 
-- 9 test files
-- 129 automated tests
+- 12 test files
+- 147 automated tests
 
 Helper methods, fixtures, and fake classes are not counted as tests.
 
@@ -19,8 +19,10 @@ Helper methods, fixtures, and fake classes are not counted as tests.
     and `updated_at` datetime values.
 - `test_base_models_have_unique_ids`
   - Verifies that separate model instances receive different IDs.
-- `test_save_updates_updated_at`
-  - Verifies that `save()` refreshes the `updated_at` timestamp.
+- `test_primary_and_foreign_keys_use_uuid_strings`
+  - Verifies that every model and association-table key uses `String(36)`.
+- `test_commit_updates_updated_at`
+  - Verifies that an ORM update and commit refreshes `updated_at`.
 - `test_update_sets_existing_attributes`
   - Verifies that `update()` changes existing attributes and ignores unknown
     attributes.
@@ -60,7 +62,7 @@ Helper methods, fixtures, and fake classes are not counted as tests.
   - Verifies that a place can be added to a user's owned places list.
 - `test_add_review`
   - Verifies that a review can be added to a user's written reviews list.
-- `test_facade_enforces_unique_email_in_memory`
+- `test_facade_enforces_unique_email_in_database`
   - Verifies that duplicate email addresses cannot be registered.
 - `test_facade_normalizes_email_before_uniqueness_check`
   - Verifies that case and surrounding whitespace cannot bypass email
@@ -152,7 +154,7 @@ Helper methods, fixtures, and fake classes are not counted as tests.
 - `test_place_to_dict_serializes_complete_model`
   - Verifies complete place serialization, including owner ID, amenity IDs,
     active flag, and ISO timestamps.
-- `test_facade_validates_owner_exists_in_memory`
+- `test_facade_validates_owner_exists_in_database`
   - Verifies that creating a place for an unknown owner raises `UserNotFound`.
 - `test_facade_place_update_rejects_unsupported_fields`
   - Verifies that `owner_id` cannot be changed through place updates.
@@ -206,7 +208,7 @@ Helper methods, fixtures, and fake classes are not counted as tests.
 - `test_facade_review_update_rejects_unsupported_fields`
   - Verifies that review `user_id`, `place_id`, and `is_active` cannot be
     updated.
-- `test_facade_validates_review_relationships_in_memory`
+- `test_facade_validates_review_relationships_in_database`
   - Verifies that reviews cannot be created for unknown places or users.
 - `test_facade_links_review_to_place_and_user`
   - Verifies that review creation links the review to both place and user.
@@ -218,9 +220,8 @@ Helper methods, fixtures, and fake classes are not counted as tests.
   - Verifies facade filtering of reviews by author.
 - `test_deleting_reviewer_preserves_review`
   - Verifies that soft-deleting a reviewer preserves reviews and relationships.
-- `test_deleting_place_preserves_review`
-  - Verifies that hard-deleting a place preserves the review record but makes
-    place-review lookup fail for the deleted place.
+- `test_deleting_place_cascades_to_review`
+  - Verifies that hard-deleting a place also deletes its dependent reviews.
 - `test_deleting_owner_deactivates_owned_places`
   - Verifies that soft-deleting a place owner deactivates their owned places
     while preserving reviews.
@@ -233,7 +234,7 @@ Helper methods, fixtures, and fake classes are not counted as tests.
 
 ## `tests/test_repository.py`
 
-### `TestInMemoryRepository`
+### `TestSQLAlchemyRepository`
 
 - `test_find_one_returns_first_matching_object`
   - Verifies returning the first object matching all supplied filters.

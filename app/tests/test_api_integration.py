@@ -28,25 +28,36 @@ except ModuleNotFoundError as error:
 )
 class TestApiErrorHandlerIntegration(unittest.TestCase):
     def setUp(self):
-        for repository in (
-            facade.user_repo,
-            facade.place_repo,
-            facade.review_repo,
-            facade.amenity_repo,
-        ):
-            repository.clear()
+        class TestConfig:
+            TESTING = True
+            SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+            SQLALCHEMY_TRACK_MODIFICATIONS = False
+            JWT_SECRET_KEY = "test-secret-key-with-at-least-32-characters"
+            SEED_ADMIN = True
+            ADMIN_FIRST_NAME = "Admin"
+            ADMIN_LAST_NAME = "User"
+            ADMIN_EMAIL = "admin@example.com"
+            ADMIN_PASSWORD = "admin-password"
+            ERROR_INCLUDE_MESSAGE = False
+            RESTX_ERROR_404_HELP = False
 
-        self.app = create_app()
-        self.app.config["TESTING"] = True
-        self.app.config["JWT_SECRET_KEY"] = (
-            "test-secret-key-with-at-least-32-characters"
-        )
+        self.app = create_app(TestConfig)
+        self.app_context = self.app.app_context()
+        self.app_context.push()
         self.client = self.app.test_client()
         self.admin = facade.get_user_by_email("admin@example.com")
         self.admin_headers = self._auth_headers(
             self.admin.id,
             is_admin=True,
         )
+
+    def tearDown(self):
+        from extensions import db
+
+        db.session.remove()
+        db.drop_all()
+        db.engine.dispose()
+        self.app_context.pop()
 
     def _auth_headers(self, user_id, is_admin=False, expires_delta=None):
         token_args = {

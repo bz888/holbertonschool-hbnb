@@ -5,6 +5,7 @@ from .base_model import BaseModel
 
 from sqlalchemy.orm import validates
 
+
 class User(BaseModel):
     """User model."""
 
@@ -37,25 +38,44 @@ class User(BaseModel):
 
     is_admin = db.Column(
         db.Boolean,
-        default=False
+        default=False,
+        nullable=False,
     )
 
     is_active = db.Column(
-    db.Boolean,
-    default=True
+        db.Boolean,
+        default=True,
+        nullable=False,
     )
 
-    # places = db.relationship(
-    # "Place",
-    # back_populates="owner",
-    # cascade="all, delete-orphan"
-    # )
+    places = db.relationship(
+        "Place",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
 
-    # reviews = db.relationship(
-    #     "Review",
-    #     back_populates="user",
-    #     cascade="all, delete-orphan"
-    # )
+    reviews = db.relationship(
+        "Review",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    def __init__(
+        self,
+        first_name=None,
+        last_name=None,
+        email=None,
+        **kwargs,
+    ):
+        """Initialize a user with positional or keyword domain fields."""
+        kwargs.setdefault("is_admin", False)
+        kwargs.setdefault("is_active", True)
+        super().__init__(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            **kwargs,
+        )
 
     @validates("first_name")
     def validate_first_name(self, key, value):
@@ -96,13 +116,15 @@ class User(BaseModel):
 
         return name
 
-    # def add_place(self, place):
-    #     """Add a place owned by the user."""
-    #     self.places.append(place)
+    def add_place(self, place):
+        """Associate an owned place with this user."""
+        if place not in self.places:
+            self.places.append(place)
 
-    # def add_review(self, review):
-    #     """Add a review written by the user."""
-    #     self.reviews.append(review)
+    def add_review(self, review):
+        """Associate an authored review with this user."""
+        if review not in self.reviews:
+            self.reviews.append(review)
 
     def hash_password(self, password):
         """Hashes the password before storing it."""

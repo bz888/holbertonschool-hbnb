@@ -2,20 +2,25 @@ import sys
 import unittest
 from pathlib import Path
 
+from sqlalchemy.exc import InvalidRequestError
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from models.user import User
-from persistence.repository import InMemoryRepository
+from persistence.repository import SQLAlchemyRepository
+from tests.orm_test_case import ORMTestCase
 
 
-class TestInMemoryRepository(unittest.TestCase):
+class TestSQLAlchemyRepository(ORMTestCase):
     def setUp(self):
-        self.repository = InMemoryRepository()
+        super().setUp()
+        self.repository = SQLAlchemyRepository(User)
         self.active_user = self.repository.add(
             User(
                 "Ada",
                 "Lovelace",
                 "ada@example.com",
+                password="password-hash",
             )
         )
         self.inactive_user = self.repository.add(
@@ -23,6 +28,7 @@ class TestInMemoryRepository(unittest.TestCase):
                 "Grace",
                 "Hopper",
                 "grace@example.com",
+                password="password-hash",
                 is_active=False,
             )
         )
@@ -56,9 +62,8 @@ class TestInMemoryRepository(unittest.TestCase):
         )
 
     def test_find_all_does_not_match_missing_attributes(self):
-        users = self.repository.find_all(missing=None)
-
-        self.assertEqual(users, [])
+        with self.assertRaises(InvalidRequestError):
+            self.repository.find_all(missing=None)
 
     def test_get_by_attribute_uses_dynamic_lookup(self):
         user = self.repository.get_by_attribute(

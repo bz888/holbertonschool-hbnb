@@ -15,11 +15,15 @@ class Amenity(BaseModel):
         unique=True,
     )
 
-    # places = db.relationship(
-    #     "Place",
-    #     secondary="place_amenities",
-    #     back_populates="amenities",
-    # )
+    places = db.relationship(
+        "Place",
+        secondary="place_amenities",
+        back_populates="amenities",
+    )
+
+    def __init__(self, name=None, **kwargs):
+        """Initialize an amenity with positional or keyword data."""
+        super().__init__(name=name, **kwargs)
 
     @validates("name")
     def validate_name(self, key, value):
