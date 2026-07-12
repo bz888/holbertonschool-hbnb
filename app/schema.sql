@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS place_amenity;
+DROP TABLE IF EXISTS place_amenities;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS places;
 DROP TABLE IF EXISTS amenities;
@@ -85,11 +85,11 @@ CREATE TABLE amenities (
 CREATE TABLE place_amenities (
     place_id    CHAR(36) NOT NULL,
     amenity_id  CHAR(36) NOT NULL,
-    PRIMARY KEY (place_id, amenity_id),
-    CONSTRAINT fk_place_amenity_place
+    PRIMARY KEY (place_id, amenities_id),
+    CONSTRAINT fk_place_amenities_place
         FOREIGN KEY (place_id) REFERENCES places(id)
         ON DELETE CASCADE,
-    CONSTRAINT fk_place_amenity_amenity
-        FOREIGN KEY (amenity_id) REFERENCES amenities(id)
+    CONSTRAINT fk_place_amenities_amenities
+        FOREIGN KEY (amenities_id) REFERENCES amenities(id)
         ON DELETE CASCADE
 );
