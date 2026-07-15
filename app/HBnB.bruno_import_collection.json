@@ -73,12 +73,12 @@
     },
     {
       "key": "admin_email",
-      "value": "admin@example.com",
+      "value": "admin@hbnb.io",
       "type": "string"
     },
     {
       "key": "admin_password",
-      "value": "admin-password",
+      "value": "admin1234",
       "type": "string"
     },
     {

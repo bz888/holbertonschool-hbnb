@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from flask import Flask
 from flask_restx import Api
+from sqlalchemy import text
 
 
 import config
@@ -11,29 +14,29 @@ from api.v1.auth import api as auth_ns
 from api.v1.places import api as places_ns
 from api.v1.reviews import api as reviews_ns
 from api.v1.users import api as users_ns
-from services import facade
+SEED_ADMIN_ID = "36c9050e-ddd3-4c3b-9731-9f487208bbc1"
+SEED_SQL_PATH = Path(__file__).with_name("seed.sql")
 
 
-def seed_admin(app):
-    """Create the configured initial administrator when none exists."""
-    if not app.config.get('SEED_ADMIN', True):
-        return None
+def seed_database():
+    """Apply the SQL seed data once after the ORM has created its tables."""
+    with db.engine.connect() as connection:
+        already_seeded = connection.execute(
+            text("SELECT 1 FROM users WHERE id = :id"),
+            {"id": SEED_ADMIN_ID},
+        ).scalar()
 
-    email = app.config['ADMIN_EMAIL']
-    existing_admin = facade.get_user_by_email(email)
-    if existing_admin is not None:
-        return existing_admin
+    if already_seeded:
+        return
 
-    return facade.create_user(
-        {
-            'first_name': app.config['ADMIN_FIRST_NAME'],
-            'last_name': app.config['ADMIN_LAST_NAME'],
-            'email': email,
-            'password': app.config['ADMIN_PASSWORD'],
-            'is_admin': True,
-        },
-        is_admin=True,
-    )
+    statements = [
+        statement.strip()
+        for statement in SEED_SQL_PATH.read_text(encoding="utf-8").split(";")
+        if statement.strip()
+    ]
+    with db.engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
 
 
 
@@ -46,12 +49,10 @@ def create_app(config_class=config.DevelopmentConfig):
     jwt.init_app(app)
 
     with app.app_context():
-        # The admin seed queries the users table, so initialise the schema
-        # before attempting to read from it on a fresh installation.
+        # schema.sql drops and recreates SQLite tables, so it is for manual
+        # database resets only. The ORM safely creates any missing tables.
         db.create_all()
-        print("Database tables created:")
-        print(db.metadata.tables.keys())
-        seed_admin(app)
+        seed_database()
 
     api = Api(app, version='1.0', title='HBnB API', description='HBnB Application API', doc='/api/v1/')
     register_error_handlers(api)

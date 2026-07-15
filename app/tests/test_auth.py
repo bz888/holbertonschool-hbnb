@@ -120,11 +120,6 @@ class TestAuthIntegration(unittest.TestCase):
             SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
             SQLALCHEMY_TRACK_MODIFICATIONS = False
             JWT_SECRET_KEY = "test-secret-key-with-at-least-32-characters"
-            SEED_ADMIN = True
-            ADMIN_FIRST_NAME = "Admin"
-            ADMIN_LAST_NAME = "User"
-            ADMIN_EMAIL = "admin@example.com"
-            ADMIN_PASSWORD = "admin-password"
             ERROR_INCLUDE_MESSAGE = False
             RESTX_ERROR_404_HELP = False
 
@@ -142,18 +137,18 @@ class TestAuthIntegration(unittest.TestCase):
         db.engine.dispose()
         self.app_context.pop()
 
-    def test_app_creation_seeds_one_admin_idempotently(self):
-        admin = facade.get_user_by_email("admin@example.com")
+    def test_app_creation_runs_seed_sql_idempotently(self):
+        admin = facade.get_user_by_email("admin@hbnb.io")
 
         self.assertIsNotNone(admin)
         self.assertTrue(admin.is_admin)
-        self.assertTrue(admin.verify_password("admin-password"))
+        self.assertTrue(admin.verify_password("admin1234"))
 
         create_app(self.config_class)
         matching_admins = [
             user
             for user in facade.get_all_users()
-            if user.email == "admin@example.com"
+            if user.email == "admin@hbnb.io"
         ]
         self.assertEqual(len(matching_admins), 1)
 

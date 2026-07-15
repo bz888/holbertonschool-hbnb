@@ -33,11 +33,6 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
             SQLALCHEMY_TRACK_MODIFICATIONS = False
             JWT_SECRET_KEY = "test-secret-key-with-at-least-32-characters"
-            SEED_ADMIN = True
-            ADMIN_FIRST_NAME = "Admin"
-            ADMIN_LAST_NAME = "User"
-            ADMIN_EMAIL = "admin@example.com"
-            ADMIN_PASSWORD = "admin-password"
             ERROR_INCLUDE_MESSAGE = False
             RESTX_ERROR_404_HELP = False
 
@@ -45,7 +40,7 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
         self.app_context = self.app.app_context()
         self.app_context.push()
         self.client = self.app.test_client()
-        self.admin = facade.get_user_by_email("admin@example.com")
+        self.admin = facade.get_user_by_email("admin@hbnb.io")
         self.admin_headers = self._auth_headers(
             self.admin.id,
             is_admin=True,
