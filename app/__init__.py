@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, request
 from flask_restx import Api
 from sqlalchemy import text
 
@@ -43,6 +43,30 @@ def seed_database():
 def create_app(config_class=config.DevelopmentConfig):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    @app.after_request
+    def allow_local_client(response):
+        """Allow browser clients served locally to call the development API."""
+        origin = request.headers.get("Origin")
+        is_local_origin = origin == "null" or (
+            origin is not None
+            and (
+                origin.startswith("http://localhost:")
+                or origin.startswith("http://127.0.0.1:")
+            )
+        )
+
+        if app.debug and is_local_origin:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Headers"] = (
+                "Content-Type, Authorization"
+            )
+            response.headers["Access-Control-Allow-Methods"] = (
+                "GET, POST, PUT, DELETE, OPTIONS"
+            )
+            response.headers["Vary"] = "Origin"
+
+        return response
 
     db.init_app(app)
     bcrypt.init_app(app)

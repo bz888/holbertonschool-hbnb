@@ -15,6 +15,57 @@ pip install -r requirements.txt
 python run.py
 ```
 
+## Docker Compose
+
+Create a local environment file before starting the containers:
+
+```bash
+cp .env.example .env
+```
+
+Keep `.env` private. For development, set `SECRET_KEY` and `JWT_SECRET_KEY`
+to local testing values. Before running the production configuration, replace
+all placeholder values with strong, unique secrets.
+
+### Development with SQLite
+
+The default Compose configuration runs Flask with a SQLite database stored at
+`data/sqlite/hbnb.sqlite3`. MySQL is not started or required during
+development.
+
+```bash
+docker compose up --build
+```
+
+To open the persisted development database with the pinned SQLite CLI:
+
+```bash
+docker compose --profile sqlite-tools run --rm sqlite3 /data/hbnb.sqlite3
+```
+
+### Production with MySQL
+
+The production override changes Flask's `DATABASE_URL` to MySQL and starts a
+MySQL container. Set `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, and
+`MYSQL_ROOT_PASSWORD` in `.env`, then run:
+
+```bash
+docker compose \
+  -f docker-compose.yml \
+  -f docker-compose.prod.yml \
+  up --build -d
+```
+
+To stop either stack, use the same Compose file arguments with `down`. For
+example, stop the production stack with:
+
+```bash
+docker compose \
+  -f docker-compose.yml \
+  -f docker-compose.prod.yml \
+  down
+```
+
 ## Tests and Coverage
 
 See the [test catalogue](tests/TEST_CATALOG.md) for the complete list of unit
