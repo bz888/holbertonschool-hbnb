@@ -197,6 +197,17 @@ textarea {
     font-size: 0.9rem;
 }
 
+.card-description {
+    margin-top: 14px;
+    color: var(--muted);
+}
+
+.places-message {
+    grid-column: 1 / -1;
+    margin: 20px;
+    text-align: center;
+}
+
 .price strong {
     color: var(--primary-dark);
     font-size: 1.55rem;

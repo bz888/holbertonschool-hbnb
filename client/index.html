@@ -15,7 +15,7 @@
             </a>
             <div class="nav-links">
                 <a class="nav-link active" href="index.html" aria-current="page">Places</a>
-                <a class="login-button" href="login.html">Login</a>
+                <a id="login-link" class="login-button" href="login.html">Login</a>
             </div>
         </nav>
     </header>
@@ -30,40 +30,15 @@
         <section class="filter" aria-label="Filter places by price">
             <label for="price-filter">Maximum price</label>
             <select id="price-filter" name="price-filter">
-                <option value="all">All prices</option>
+                <option value="10">Up to $10</option>
+                <option value="50">Up to $50</option>
                 <option value="100">Up to $100</option>
-                <option value="150">Up to $150</option>
-                <option value="200">Up to $200</option>
+                <option value="all" selected>All prices</option>
             </select>
         </section>
 
         <section id="places-list" class="places-grid" aria-label="Available places">
-            <article class="place-card" data-price="85">
-                <div>
-                    <p class="card-location">Melbourne, Victoria</p>
-                    <h2>Cosy City Apartment</h2>
-                </div>
-                <p class="price"><strong>$85</strong> per night</p>
-                <a class="details-button" href="place.html?id=1">View Details</a>
-            </article>
-
-            <article class="place-card" data-price="140">
-                <div>
-                    <p class="card-location">Byron Bay, New South Wales</p>
-                    <h2>Beachside Bungalow</h2>
-                </div>
-                <p class="price"><strong>$140</strong> per night</p>
-                <a class="details-button" href="place.html?id=2">View Details</a>
-            </article>
-
-            <article class="place-card" data-price="195">
-                <div>
-                    <p class="card-location">Hobart, Tasmania</p>
-                    <h2>Harbour View Loft</h2>
-                </div>
-                <p class="price"><strong>$195</strong> per night</p>
-                <a class="details-button" href="place.html?id=3">View Details</a>
-            </article>
+            <p class="places-message" role="status">Loading places…</p>
         </section>
     </main>
 

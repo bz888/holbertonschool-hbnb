@@ -1,11 +1,134 @@
+const API_BASE_URL = 'http://localhost:8080/api/v1';
+
+function getCookie(name) {
+    const prefix = `${encodeURIComponent(name)}=`;
+    const cookie = document.cookie
+        .split(';')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith(prefix));
+
+    return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
+}
+
+function checkAuthentication() {
+    const token = getCookie('token');
+    const loginLink = document.getElementById('login-link');
+
+    if (loginLink) {
+        loginLink.style.display = token ? 'none' : 'inline-flex';
+    }
+
+    return token;
+}
+
+async function fetchPlaces(token) {
+    const headers = {};
+
+    if (token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/places/`, { headers });
+
+    if (!response.ok) {
+        throw new Error(`Unable to load places (${response.status}).`);
+    }
+
+    const places = await response.json();
+    displayPlaces(places);
+}
+
+function formatCoordinate(value) {
+    const coordinate = Number(value);
+    return Number.isFinite(coordinate) ? coordinate.toFixed(4) : 'Unknown';
+}
+
+function displayPlaces(places) {
+    const placesList = document.getElementById('places-list');
+
+    if (!placesList) {
+        return;
+    }
+
+    placesList.innerHTML = '';
+
+    if (!Array.isArray(places) || places.length === 0) {
+        const message = document.createElement('p');
+        message.className = 'places-message';
+        message.textContent = 'No places are currently available.';
+        placesList.appendChild(message);
+        return;
+    }
+
+    places.forEach((place) => {
+        const card = document.createElement('article');
+        const headingGroup = document.createElement('div');
+        const location = document.createElement('p');
+        const title = document.createElement('h2');
+        const description = document.createElement('p');
+        const price = document.createElement('p');
+        const priceAmount = document.createElement('strong');
+        const detailsLink = document.createElement('a');
+
+        card.className = 'place-card';
+        card.dataset.price = String(Number(place.price) || 0);
+
+        location.className = 'card-location';
+        location.textContent = `${formatCoordinate(place.latitude)}, ${formatCoordinate(place.longitude)}`;
+        title.textContent = place.title || 'Untitled place';
+        description.className = 'card-description';
+        description.textContent = place.description || 'No description available.';
+        headingGroup.append(location, title, description);
+
+        price.className = 'price';
+        priceAmount.textContent = `$${Number(place.price).toFixed(2)}`;
+        price.append(priceAmount, ' per night');
+
+        detailsLink.className = 'details-button';
+        detailsLink.href = `place.html?id=${encodeURIComponent(place.id)}`;
+        detailsLink.textContent = 'View Details';
+
+        card.append(headingGroup, price, detailsLink);
+        placesList.appendChild(card);
+    });
+
+    applyPriceFilter();
+}
+
+function applyPriceFilter() {
+    const priceFilter = document.getElementById('price-filter');
+
+    if (!priceFilter) {
+        return;
+    }
+
+    const maximumPrice = priceFilter.value;
+    document.querySelectorAll('#places-list .place-card').forEach((card) => {
+        const price = Number(card.dataset.price);
+        card.style.display = maximumPrice === 'all' || price <= Number(maximumPrice)
+            ? 'flex'
+            : 'none';
+    });
+}
+
+function showPlacesError(error) {
+    const placesList = document.getElementById('places-list');
+
+    if (!placesList) {
+        return;
+    }
+
+    placesList.innerHTML = '';
+    const message = document.createElement('p');
+    message.className = 'places-message form-error';
+    message.setAttribute('role', 'alert');
+    message.textContent = error.message || 'Unable to load places.';
+    placesList.appendChild(message);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    const cookieNames = document.cookie.split(';').map((cookie) => cookie.trim().split('=')[0]);
-    const isAuthenticated = Boolean(
-        localStorage.getItem('token')
-        || localStorage.getItem('authToken')
-        || cookieNames.includes('token')
-        || cookieNames.includes('authToken')
-    );
+    const token = checkAuthentication();
+    const isAuthenticated = Boolean(token);
 
     document.querySelectorAll('[data-auth-only]').forEach((element) => {
         element.hidden = !isAuthenticated;
@@ -18,15 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const priceFilter = document.getElementById('price-filter');
 
     if (priceFilter) {
-        priceFilter.addEventListener('change', () => {
-            const maximumPrice = priceFilter.value;
-            const placeCards = document.querySelectorAll('.place-card');
-
-            placeCards.forEach((card) => {
-                const price = Number(card.dataset.price);
-                card.hidden = maximumPrice !== 'all' && price > Number(maximumPrice);
-            });
-        });
+        priceFilter.addEventListener('change', applyPriceFilter);
+        fetchPlaces(token).catch(showPlacesError);
     }
 
     const loginForm = document.getElementById('login-form');
@@ -68,7 +184,7 @@ async function loginUser(email, password) {
     let response;
 
     try {
-        response = await fetch('http://localhost:8080/api/v1/auth/login', {
+        response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
