@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Browse unique places to stay with HBNB.">
+    <title>HBNB | Places</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="navbar" aria-label="Main navigation">
+            <a class="brand" href="index.html" aria-label="HBNB home">
+                <img class="logo" src="images/logo.png" alt="HBNB logo">
+            </a>
+            <div class="nav-links">
+                <a class="nav-link active" href="index.html" aria-current="page">Places</a>
+                <a class="login-button" href="login.html">Login</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero" aria-labelledby="places-heading">
+            <p class="eyebrow">Find your next stay</p>
+            <h1 id="places-heading">Explore our places</h1>
+            <p>Comfortable homes, memorable locations, and everything you need for a great trip.</p>
+        </section>
+
+        <section class="filter" aria-label="Filter places by price">
+            <label for="price-filter">Maximum price</label>
+            <select id="price-filter" name="price-filter">
+                <option value="all">All prices</option>
+                <option value="100">Up to $100</option>
+                <option value="150">Up to $150</option>
+                <option value="200">Up to $200</option>
+            </select>
+        </section>
+
+        <section id="places-list" class="places-grid" aria-label="Available places">
+            <article class="place-card" data-price="85">
+                <div>
+                    <p class="card-location">Melbourne, Victoria</p>
+                    <h2>Cosy City Apartment</h2>
+                </div>
+                <p class="price"><strong>$85</strong> per night</p>
+                <a class="details-button" href="place.html?id=1">View Details</a>
+            </article>
+
+            <article class="place-card" data-price="140">
+                <div>
+                    <p class="card-location">Byron Bay, New South Wales</p>
+                    <h2>Beachside Bungalow</h2>
+                </div>
+                <p class="price"><strong>$140</strong> per night</p>
+                <a class="details-button" href="place.html?id=2">View Details</a>
+            </article>
+
+            <article class="place-card" data-price="195">
+                <div>
+                    <p class="card-location">Hobart, Tasmania</p>
+                    <h2>Harbour View Loft</h2>
+                </div>
+                <p class="price"><strong>$195</strong> per night</p>
+                <a class="details-button" href="place.html?id=3">View Details</a>
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 HBNB. All rights reserved.</p>
+    </footer>
+    <script src="scripts.js"></script>
+</body>
+</html>

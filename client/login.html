@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Log in to your HBNB account.">
+    <title>HBNB | Login</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="navbar" aria-label="Main navigation">
+            <a class="brand" href="index.html" aria-label="HBNB home">
+                <img class="logo" src="images/logo.png" alt="HBNB logo">
+            </a>
+            <div class="nav-links">
+                <a class="nav-link" href="index.html">Places</a>
+                <a class="login-button active" href="login.html" aria-current="page">Login</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="centered-page">
+        <section class="form-panel" aria-labelledby="login-heading">
+            <p class="eyebrow">Welcome back</p>
+            <h1 id="login-heading">Login to HBNB</h1>
+            <p class="form-intro">Sign in to review places and manage your account.</p>
+
+            <form id="login-form" class="form" method="post">
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password" required>
+                </div>
+
+                <button class="primary-button" type="submit">Login</button>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 HBNB. All rights reserved.</p>
+    </footer>
+    <script src="scripts.js"></script>
+</body>
+</html>

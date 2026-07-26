@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="View details, amenities, and guest reviews for an HBNB place.">
+    <title>HBNB | Place Details</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="navbar" aria-label="Main navigation">
+            <a class="brand" href="index.html" aria-label="HBNB home">
+                <img class="logo" src="images/logo.png" alt="HBNB logo">
+            </a>
+            <div class="nav-links">
+                <a class="nav-link" href="index.html">Places</a>
+                <a class="login-button" href="login.html">Login</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <article id="place-details" class="place-details">
+            <div class="place-heading">
+                <div>
+                    <p class="eyebrow">Melbourne, Victoria</p>
+                    <h1>Cosy City Apartment</h1>
+                </div>
+                <p class="price"><strong>$85</strong> per night</p>
+            </div>
+
+            <section class="place-info" aria-labelledby="about-heading">
+                <h2 id="about-heading">About this place</h2>
+                <dl class="place-facts">
+                    <div><dt>Host</dt><dd>Alex Morgan</dd></div>
+                    <div><dt>Guests</dt><dd>2</dd></div>
+                    <div><dt>Bedrooms</dt><dd>1</dd></div>
+                    <div><dt>Bathrooms</dt><dd>1</dd></div>
+                </dl>
+                <p>A bright, quiet apartment in the heart of the city. Enjoy a comfortable living space, a fully equipped kitchen, and easy access to Melbourne's best cafes, galleries, and public transport.</p>
+            </section>
+
+            <section class="place-info" aria-labelledby="amenities-heading">
+                <h2 id="amenities-heading">Amenities</h2>
+                <ul class="amenities-list">
+                    <li><img src="images/icon_wifi.png" alt="">Free Wi-Fi</li>
+                    <li><img src="images/icon_bed.png" alt="">Queen bed</li>
+                    <li><img src="images/icon_bath.png" alt="">Private bathroom</li>
+                </ul>
+            </section>
+        </article>
+
+        <section id="reviews" class="reviews-section" aria-labelledby="reviews-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">Guest feedback</p>
+                    <h2 id="reviews-heading">Reviews</h2>
+                </div>
+                <a class="details-button" href="add_review.html?id=1" data-auth-only hidden>Add a Review</a>
+            </div>
+
+            <article class="review-card">
+                <div class="review-meta">
+                    <h3>Jamie Lee</h3>
+                    <p class="rating" aria-label="Rating: 5 out of 5">★★★★★ <span>5/5</span></p>
+                </div>
+                <p>Wonderful location and a very comfortable stay. The apartment was spotless and the host was helpful.</p>
+            </article>
+
+            <article class="review-card">
+                <div class="review-meta">
+                    <h3>Priya Shah</h3>
+                    <p class="rating" aria-label="Rating: 4 out of 5">★★★★☆ <span>4/5</span></p>
+                </div>
+                <p>Perfect for a weekend in the city. Everything we needed was within walking distance.</p>
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 HBNB. All rights reserved.</p>
+    </footer>
+    <script src="scripts.js"></script>
+</body>
+</html>
