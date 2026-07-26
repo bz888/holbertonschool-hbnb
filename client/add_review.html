@@ -23,7 +23,7 @@
     <main class="centered-page">
         <section id="add-review" class="form-panel add-review" aria-labelledby="review-heading">
             <p class="eyebrow">Share your experience</p>
-            <h1 id="review-heading">Review Cosy City Apartment</h1>
+            <h1 id="review-heading">Review this place</h1>
             <p class="form-intro">Tell other guests what you enjoyed about your stay.</p>
 
             <div class="auth-notice" data-auth-guest hidden>
@@ -49,8 +49,10 @@
                     </select>
                 </div>
 
+                <p id="review-message" role="status" aria-live="polite" hidden></p>
+
                 <button class="primary-button" type="submit">Submit Review</button>
-                <a class="text-link" href="place.html?id=1">Cancel and return to place</a>
+                <a id="review-cancel-link" class="text-link" href="index.html">Cancel and return to place</a>
             </form>
         </section>
     </main>

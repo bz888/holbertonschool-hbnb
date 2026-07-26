@@ -32,7 +32,10 @@ class ReviewList(Resource):
         """Create a new review"""
         review_data = api.payload.copy()
         review_data["user_id"] = get_jwt_identity()
-        review = facade.create_review(review_data)
+        review = facade.create_review(
+            review_data,
+            is_admin=get_jwt().get("is_admin", False) is True,
+        )
         return review, 201
 
 

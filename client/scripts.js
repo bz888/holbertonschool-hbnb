@@ -10,6 +10,21 @@ function getCookie(name) {
     return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
 }
 
+function storeAuthToken(token) {
+    const attributes = [
+        `token=${encodeURIComponent(token)}`,
+        'path=/',
+        'SameSite=Lax'
+    ];
+
+    if (window.location.protocol === 'https:') {
+        attributes.push('Secure');
+    }
+
+    document.cookie = attributes.join('; ');
+    return getCookie('token') === token;
+}
+
 function checkAuthentication() {
     const token = getCookie('token');
     const isAuthenticated = Boolean(token);
@@ -32,6 +47,52 @@ function checkAuthentication() {
 function getPlaceIdFromURL() {
     const placeId = new URLSearchParams(window.location.search).get('id');
     return placeId ? placeId.trim() : null;
+}
+
+async function submitReview(token, placeId, reviewText, rating) {
+    let response;
+
+    try {
+        response = await fetch(`${API_BASE_URL}/reviews/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: reviewText,
+                rating,
+                place_id: placeId
+            })
+        });
+    } catch (error) {
+        throw new Error('Unable to connect to the server. Please try again.');
+    }
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        // Keep the fallback message below when the API response has no JSON body.
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            data.message
+            || data.error
+            || `Failed to submit review (${response.status}).`
+        );
+    }
+
+    return data;
+}
+
+function showReviewMessage(messageElement, message, isError = false) {
+    messageElement.textContent = message;
+    messageElement.className = isError ? 'form-error' : 'form-success';
+    messageElement.setAttribute('role', isError ? 'alert' : 'status');
+    messageElement.hidden = false;
 }
 
 async function fetchPlaces(token) {
@@ -305,6 +366,79 @@ function showPlacesError(error) {
 document.addEventListener('DOMContentLoaded', () => {
     const token = checkAuthentication();
 
+    const reviewForm = document.getElementById('review-form');
+
+    if (reviewForm) {
+        if (!token) {
+            window.location.href = 'index.html';
+            return;
+        }
+
+        const placeId = getPlaceIdFromURL();
+        const reviewInput = document.getElementById('review');
+        const ratingInput = document.getElementById('rating');
+        const messageElement = document.getElementById('review-message');
+        const submitButton = reviewForm.querySelector('button[type="submit"]');
+        const cancelLink = document.getElementById('review-cancel-link');
+
+        if (placeId) {
+            cancelLink.href = `place.html?id=${encodeURIComponent(placeId)}`;
+        } else {
+            showReviewMessage(
+                messageElement,
+                'No place was selected. Return to the places page and choose a place.',
+                true
+            );
+            submitButton.disabled = true;
+        }
+
+        reviewForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            messageElement.hidden = true;
+            messageElement.textContent = '';
+
+            if (!reviewForm.checkValidity()) {
+                reviewForm.reportValidity();
+                return;
+            }
+
+            const reviewText = reviewInput.value.trim();
+            const rating = Number(ratingInput.value);
+
+            if (reviewText.length < 10) {
+                showReviewMessage(
+                    messageElement,
+                    'Your review must be at least 10 characters long.',
+                    true
+                );
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting…';
+
+            try {
+                await submitReview(token, placeId, reviewText, rating);
+                reviewForm.reset();
+                showReviewMessage(
+                    messageElement,
+                    'Review submitted successfully! Returning to the place…'
+                );
+                window.setTimeout(() => {
+                    window.location.href = (
+                        `place.html?id=${encodeURIComponent(placeId)}`
+                    );
+                }, 1000);
+            } catch (error) {
+                showReviewMessage(messageElement, error.message, true);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Review';
+            }
+        });
+    }
+
     const priceFilter = document.getElementById('price-filter');
 
     if (priceFilter) {
@@ -390,6 +524,12 @@ async function loginUser(email, password) {
         throw new Error('Login succeeded, but the server did not return a token.');
     }
 
-    document.cookie = `token=${encodeURIComponent(data.access_token)}; path=/; SameSite=Lax`;
+    if (!storeAuthToken(data.access_token)) {
+        throw new Error(
+            'Login succeeded, but the browser could not store your session. '
+            + 'Open HBNB through a local web server instead of directly from a file.'
+        );
+    }
+
     window.location.href = 'index.html';
 }

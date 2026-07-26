@@ -361,6 +361,27 @@ class TestReview(ORMTestCase):
                 }
             )
 
+    def test_admin_can_review_same_place_twice(self):
+        facade, _, reviewer, place, first_review = self._create_review(
+            facade=HBnBFacade()
+        )
+
+        second_review = facade.create_review(
+            {
+                "text": "Second review",
+                "rating": 4,
+                "place_id": place.id,
+                "user_id": reviewer.id,
+            },
+            is_admin=True,
+        )
+
+        self.assertNotEqual(second_review.id, first_review.id)
+        self.assertEqual(
+            facade.get_reviews_by_place(place.id),
+            [first_review, second_review],
+        )
+
     def test_reviews_can_be_listed_by_user(self):
         facade, _, reviewer, _, review = self._create_review(facade=HBnBFacade())
 
