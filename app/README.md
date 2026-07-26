@@ -29,9 +29,9 @@ all placeholder values with strong, unique secrets.
 
 ### Development with SQLite
 
-The default Compose configuration runs Flask with a SQLite database stored at
-`data/sqlite/hbnb.sqlite3`. MySQL is not started or required during
-development.
+The development Compose configuration selects `DevelopmentConfig` and stores
+its SQLite database at `data/sqlite/hbnb.sqlite3`. MySQL is not started or
+required.
 
 ```bash
 docker compose up --build
@@ -43,27 +43,44 @@ To open the persisted development database with the pinned SQLite CLI:
 docker compose --profile sqlite-tools run --rm sqlite3 /data/hbnb.sqlite3
 ```
 
-### Production with MySQL
+### MySQL Compatibility Mode
 
-The production override changes Flask's `DATABASE_URL` to MySQL and starts a
-MySQL container. Set `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, and
-`MYSQL_ROOT_PASSWORD` in `.env`, then run:
+The standalone production Compose configuration selects `ProductionConfig`
+and runs the same Flask application against MySQL. This mode is for verifying
+database compatibility locally; it is not intended as an internet-facing
+deployment.
+
+Stop the development stack first because both modes publish port `8080`:
 
 ```bash
-docker compose \
-  -f docker-compose.yml \
-  -f docker-compose.prod.yml \
-  up --build -d
+docker compose down
 ```
 
-To stop either stack, use the same Compose file arguments with `down`. For
-example, stop the production stack with:
+Set `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, and
+`MYSQL_ROOT_PASSWORD` in `.env`, then start MySQL mode:
 
 ```bash
-docker compose \
-  -f docker-compose.yml \
-  -f docker-compose.prod.yml \
-  down
+docker compose -f docker-compose.prod.yml up --build
+```
+
+To switch back to SQLite, stop MySQL mode without removing its named database
+volume, then start development again:
+
+```bash
+docker compose -f docker-compose.prod.yml down
+docker compose up --build
+```
+
+SQLite uses `seeds/seed.sqlite.sql`, while MySQL uses
+`seeds/seed.mysql.sql`. Both seed scripts are idempotent and are selected from
+the active SQLAlchemy dialect.
+
+If the MySQL credentials in `.env` change, recreate the local compatibility
+database so MySQL can initialize it with the new values. This deletes all data
+stored in the MySQL-mode named volume:
+
+```bash
+docker compose -f docker-compose.prod.yml down --volumes
 ```
 
 ## Tests and Coverage

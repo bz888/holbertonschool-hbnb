@@ -1,14 +1,35 @@
+name: hbnb-prod
+
 services:
   flask:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: hbnb-flask:local
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
     environment:
+      APP_ENV: production
       DATABASE_URL: "mysql+pymysql://${MYSQL_USER:-hbnb}:${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}@mysql:3306/${MYSQL_DATABASE:-hbnb}"
+      SECRET_KEY: "${SECRET_KEY:?Set SECRET_KEY in .env}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}"
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8080/api/v1/', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   mysql:
     image: mysql:9.6.0
-    container_name: hbnb-mysql
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: "${MYSQL_DATABASE:-hbnb}"
@@ -16,7 +37,7 @@ services:
       MYSQL_PASSWORD: "${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}"
       MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}"
     volumes:
-      - ./data/mysql:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
     healthcheck:
       test:
         - CMD-SHELL
@@ -25,3 +46,6 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+
+volumes:
+  mysql-data:
