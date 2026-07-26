@@ -346,6 +346,44 @@ class TestReview(ORMTestCase):
                 }
             )
 
+    def test_admin_can_review_own_place(self):
+        facade = HBnBFacade()
+        admin = facade.create_user(
+            {
+                "first_name": "Admin",
+                "last_name": "User",
+                "email": "admin@example.com",
+                "password": "test-password",
+                "is_admin": True,
+            },
+            is_admin=True,
+        )
+        place = facade.create_place(
+            {
+                "title": "Admin flat",
+                "description": "Admin-owned place",
+                "price": 100.0,
+                "latitude": 0.0,
+                "longitude": 0.0,
+                "owner_id": admin.id,
+            }
+        )
+
+        review = facade.create_review(
+            {
+                "text": "Admin review of own place",
+                "rating": 5,
+                "place_id": place.id,
+                "user_id": admin.id,
+            },
+            is_admin=True,
+        )
+
+        self.assertIs(review.user, admin)
+        self.assertIs(review.place, place)
+        self.assertIn(review, admin.reviews)
+        self.assertIn(review, place.reviews)
+
     def test_user_cannot_review_same_place_twice(self):
         facade, _, reviewer, place, _ = self._create_review(
             facade=HBnBFacade()

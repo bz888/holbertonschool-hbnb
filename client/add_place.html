@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="List a new place on HBNB.">
+    <title>HBNB | Add Place</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <nav class="navbar" aria-label="Main navigation">
+            <a class="brand" href="index.html" aria-label="HBNB home">
+                <img class="logo" src="images/logo.png" alt="HBNB logo">
+            </a>
+            <div class="nav-links">
+                <a class="nav-link" href="index.html">Places</a>
+                <a class="nav-link active" href="add_place.html" aria-current="page" data-auth-only hidden>Add Place</a>
+                <a class="login-button" href="login.html">Login</a>
+                <button class="logout-button" type="button" data-auth-only hidden>Logout</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="centered-page">
+        <section class="form-panel" aria-labelledby="place-heading">
+            <p class="eyebrow">Host on HBNB</p>
+            <h1 id="place-heading">Add a new place</h1>
+            <p class="form-intro">Share the essentials guests need to choose their next stay.</p>
+
+            <form id="place-form" class="form" method="post" data-auth-only hidden>
+                <div class="form-group">
+                    <label for="title">Place title</label>
+                    <input type="text" id="title" name="title" maxlength="100" autocomplete="off" placeholder="Sunny apartment near the city" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="6" placeholder="Describe the space, location, and what makes it special."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Price per night</label>
+                    <input type="number" id="price" name="price" min="0.01" step="0.01" inputmode="decimal" placeholder="150.00" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="latitude">Latitude</label>
+                    <input type="number" id="latitude" name="latitude" min="-90" max="90" step="any" inputmode="decimal" placeholder="-37.8136" required>
+                    <p class="form-hint">Enter a value between -90 and 90.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="longitude">Longitude</label>
+                    <input type="number" id="longitude" name="longitude" min="-180" max="180" step="any" inputmode="decimal" placeholder="144.9631" required>
+                    <p class="form-hint">Enter a value between -180 and 180.</p>
+                </div>
+
+                <fieldset class="form-fieldset">
+                    <legend>Amenities (optional)</legend>
+                    <div id="amenities-options" class="checkbox-grid">
+                        <p class="form-hint" role="status">Loading amenities…</p>
+                    </div>
+                </fieldset>
+
+                <p id="place-message" role="status" aria-live="polite" hidden></p>
+
+                <button class="primary-button" type="submit">Create Place</button>
+                <a class="text-link" href="index.html">Cancel and return to places</a>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 HBNB. All rights reserved.</p>
+    </footer>
+    <script src="scripts.js"></script>
+</body>
+</html>

@@ -479,6 +479,22 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             2,
         )
 
+    def test_admin_can_review_own_place(self):
+        place = self._create_place(self.admin.id)
+
+        response = self.client.post(
+            f"/api/v1/places/{place['id']}/reviews",
+            json={
+                "text": "Admin review of own place",
+                "rating": 5,
+            },
+            headers=self.admin_headers,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.get_json()["user_id"], self.admin.id)
+        self.assertEqual(response.get_json()["place_id"], place["id"])
+
     def test_jwt_protected_write_routes_require_token(self):
         owner = self._create_user()
         reviewer = self._create_user(

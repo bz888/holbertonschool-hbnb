@@ -68,16 +68,20 @@ a {
 }
 
 .nav-link,
-.login-button {
+.login-button,
+.logout-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 42px;
     padding: 8px 16px;
+    border: 0;
     border-radius: 8px;
     color: #fff;
+    font: inherit;
     font-weight: 700;
     text-decoration: none;
+    cursor: pointer;
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
@@ -86,12 +90,14 @@ a {
     background: rgba(255, 255, 255, 0.12);
 }
 
-.login-button {
+.login-button,
+.logout-button {
     background: var(--primary);
 }
 
 .login-button:hover,
-.login-button.active {
+.login-button.active,
+.logout-button:hover {
     background: var(--primary-dark);
     transform: translateY(-1px);
 }
@@ -263,6 +269,45 @@ textarea {
 .form-group {
     display: grid;
     gap: 8px;
+}
+
+.form-fieldset {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 0;
+}
+
+.form-fieldset legend {
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.form-hint {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid #cfd1d6;
+    border-radius: 8px;
+    background: var(--background);
+    cursor: pointer;
+}
+
+.checkbox-option input {
+    width: auto;
+    accent-color: var(--primary);
 }
 
 .form {
@@ -503,7 +548,7 @@ footer {
         height: 40px;
     }
 
-    .nav-link {
+    .nav-link:not([data-auth-only]) {
         display: none;
     }
 
@@ -540,5 +585,9 @@ footer {
 
     .place-facts {
         grid-template-columns: 1fr 1fr;
+    }
+
+    .checkbox-grid {
+        grid-template-columns: 1fr;
     }
 }

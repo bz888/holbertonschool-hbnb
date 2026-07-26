@@ -336,7 +336,7 @@ class HBnBFacade:
         if user is None:
             raise UserNotFound(data["user_id"])
 
-        if user.id == place.owner_id:
+        if not is_admin and user.id == place.owner_id:
             raise OwnerCannotReviewOwnPlace()
 
         if not is_admin and self.review_repo.find_one(

@@ -25,6 +25,74 @@ function storeAuthToken(token) {
     return getCookie('token') === token;
 }
 
+function clearAuthToken() {
+    const attributes = [
+        'token=',
+        'path=/',
+        'expires=Thu, 01 Jan 1970 00:00:00 GMT',
+        'Max-Age=0',
+        'SameSite=Lax'
+    ];
+
+    if (window.location.protocol === 'https:') {
+        attributes.push('Secure');
+    }
+
+    document.cookie = attributes.join('; ');
+}
+
+function logout() {
+    clearAuthToken();
+    window.location.href = 'index.html';
+}
+
+function getSafeLoginDestination() {
+    const destination = new URLSearchParams(window.location.search).get('next');
+
+    if (
+        !destination
+        || destination.startsWith('/')
+        || destination.includes('..')
+        || !/^[a-z0-9_-]+\.html(?:\?[^#]*)?(?:#.*)?$/i.test(destination)
+    ) {
+        return 'index.html';
+    }
+
+    return destination;
+}
+
+function redirectToLogin(destination) {
+    window.location.href = (
+        `login.html?next=${encodeURIComponent(destination)}`
+    );
+}
+
+function getCurrentPageDestination() {
+    const page = window.location.pathname.split('/').pop() || 'index.html';
+    return `${page}${window.location.search}`;
+}
+
+function redirectOnAuthenticationError(
+    response,
+    destination = getCurrentPageDestination()
+) {
+    if (response.status !== 401 && response.status !== 422) {
+        return false;
+    }
+
+    clearAuthToken();
+    redirectToLogin(destination);
+    return true;
+}
+
+function createAuthenticationError() {
+    const error = new Error(
+        'Your session has expired or is invalid. Please log in again.'
+    );
+    error.requiresLogin = true;
+    return error;
+}
+
 function checkAuthentication() {
     const token = getCookie('token');
     const isAuthenticated = Boolean(token);
@@ -69,6 +137,10 @@ async function submitReview(token, placeId, reviewText, rating) {
         throw new Error('Unable to connect to the server. Please try again.');
     }
 
+    if (redirectOnAuthenticationError(response)) {
+        throw createAuthenticationError();
+    }
+
     let data = {};
 
     try {
@@ -88,11 +160,147 @@ async function submitReview(token, placeId, reviewText, rating) {
     return data;
 }
 
-function showReviewMessage(messageElement, message, isError = false) {
+async function validateAuthToken(token) {
+    let response;
+
+    try {
+        response = await fetch(`${API_BASE_URL}/auth/protected`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+    } catch (error) {
+        throw new Error('Unable to verify your session. Please try again.');
+    }
+
+    if (redirectOnAuthenticationError(response)) {
+        return false;
+    }
+
+    if (!response.ok) {
+        throw new Error(`Unable to verify your session (${response.status}).`);
+    }
+
+    return true;
+}
+
+async function fetchAmenities() {
+    let response;
+
+    try {
+        response = await fetch(`${API_BASE_URL}/amenities/`);
+    } catch (error) {
+        throw new Error('Unable to load amenities.');
+    }
+
+    if (!response.ok) {
+        throw new Error(`Unable to load amenities (${response.status}).`);
+    }
+
+    const amenities = await response.json();
+    return Array.isArray(amenities) ? amenities : [];
+}
+
+function displayAmenityOptions(amenities) {
+    const amenitiesContainer = document.getElementById('amenities-options');
+
+    if (!amenitiesContainer) {
+        return;
+    }
+
+    amenitiesContainer.innerHTML = '';
+
+    if (amenities.length === 0) {
+        const message = document.createElement('p');
+        message.className = 'form-hint';
+        message.textContent = 'No amenities are currently available.';
+        amenitiesContainer.appendChild(message);
+        return;
+    }
+
+    amenities.forEach((amenity) => {
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        const name = document.createElement('span');
+
+        label.className = 'checkbox-option';
+        checkbox.type = 'checkbox';
+        checkbox.name = 'amenity_ids';
+        checkbox.value = amenity.id;
+        name.textContent = amenity.name || 'Unnamed amenity';
+        label.append(checkbox, name);
+        amenitiesContainer.appendChild(label);
+    });
+}
+
+function showAmenityLoadError(error) {
+    const amenitiesContainer = document.getElementById('amenities-options');
+
+    if (!amenitiesContainer) {
+        return;
+    }
+
+    amenitiesContainer.innerHTML = '';
+    const message = document.createElement('p');
+    message.className = 'form-hint';
+    message.setAttribute('role', 'status');
+    message.textContent = (
+        `${error.message} You can still create the place without amenities.`
+    );
+    amenitiesContainer.appendChild(message);
+}
+
+async function submitPlace(token, placeData) {
+    let response;
+
+    try {
+        response = await fetch(`${API_BASE_URL}/places/`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(placeData)
+        });
+    } catch (error) {
+        throw new Error('Unable to connect to the server. Please try again.');
+    }
+
+    if (redirectOnAuthenticationError(response)) {
+        throw createAuthenticationError();
+    }
+
+    let data = {};
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        // Keep the fallback message below when the API response has no JSON body.
+    }
+
+    if (!response.ok) {
+        const message = (
+            data.message
+            || data.error
+            || `Failed to create place (${response.status}).`
+        );
+        const requestError = new Error(message);
+
+        throw requestError;
+    }
+
+    return data;
+}
+
+function showFormMessage(messageElement, message, isError = false) {
     messageElement.textContent = message;
     messageElement.className = isError ? 'form-error' : 'form-success';
     messageElement.setAttribute('role', isError ? 'alert' : 'status');
     messageElement.hidden = false;
+}
+
+function showReviewMessage(messageElement, message, isError = false) {
+    showFormMessage(messageElement, message, isError);
 }
 
 async function fetchPlaces(token) {
@@ -103,6 +311,10 @@ async function fetchPlaces(token) {
     }
 
     const response = await fetch(`${API_BASE_URL}/places/`, { headers });
+
+    if (token && redirectOnAuthenticationError(response)) {
+        return;
+    }
 
     if (!response.ok) {
         throw new Error(`Unable to load places (${response.status}).`);
@@ -123,6 +335,10 @@ async function fetchPlaceDetails(token, placeId) {
         `${API_BASE_URL}/places/${encodeURIComponent(placeId)}`,
         { headers }
     );
+
+    if (token && redirectOnAuthenticationError(response)) {
+        return;
+    }
 
     if (!response.ok) {
         throw new Error(`Unable to load place details (${response.status}).`);
@@ -366,11 +582,18 @@ function showPlacesError(error) {
 document.addEventListener('DOMContentLoaded', () => {
     const token = checkAuthentication();
 
+    document.querySelectorAll('.logout-button').forEach((logoutButton) => {
+        logoutButton.addEventListener('click', logout);
+    });
+
     const reviewForm = document.getElementById('review-form');
 
     if (reviewForm) {
         if (!token) {
-            window.location.href = 'index.html';
+            const destination = (
+                `add_review.html${window.location.search}`
+            );
+            redirectToLogin(destination);
             return;
         }
 
@@ -435,6 +658,91 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Submit Review';
+            }
+        });
+    }
+
+    const placeForm = document.getElementById('place-form');
+
+    if (placeForm) {
+        if (!token) {
+            redirectToLogin('add_place.html');
+            return;
+        }
+
+        const messageElement = document.getElementById('place-message');
+        const submitButton = placeForm.querySelector('button[type="submit"]');
+        const titleInput = document.getElementById('title');
+        const descriptionInput = document.getElementById('description');
+        const priceInput = document.getElementById('price');
+        const latitudeInput = document.getElementById('latitude');
+        const longitudeInput = document.getElementById('longitude');
+
+        submitButton.disabled = true;
+        submitButton.textContent = 'Checking session…';
+
+        validateAuthToken(token)
+            .then((isValid) => {
+                if (!isValid) {
+                    return;
+                }
+
+                submitButton.disabled = false;
+                submitButton.textContent = 'Create Place';
+                fetchAmenities()
+                    .then(displayAmenityOptions)
+                    .catch(showAmenityLoadError);
+            })
+            .catch((error) => {
+                showFormMessage(messageElement, error.message, true);
+                submitButton.textContent = 'Create Place';
+            });
+
+        placeForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            messageElement.hidden = true;
+            messageElement.textContent = '';
+
+            if (!placeForm.checkValidity()) {
+                placeForm.reportValidity();
+                return;
+            }
+
+            const amenityIds = Array.from(
+                placeForm.querySelectorAll(
+                    'input[name="amenity_ids"]:checked'
+                )
+            ).map((checkbox) => checkbox.value);
+            const placeData = {
+                title: titleInput.value.trim(),
+                description: descriptionInput.value.trim(),
+                price: Number(priceInput.value),
+                latitude: Number(latitudeInput.value),
+                longitude: Number(longitudeInput.value),
+                amenity_ids: amenityIds
+            };
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Creating…';
+
+            try {
+                const place = await submitPlace(token, placeData);
+                placeForm.reset();
+                showFormMessage(
+                    messageElement,
+                    'Place created successfully! Opening its details…'
+                );
+                window.setTimeout(() => {
+                    window.location.href = (
+                        `place.html?id=${encodeURIComponent(place.id)}`
+                    );
+                }, 1000);
+            } catch (error) {
+                showFormMessage(messageElement, error.message, true);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Create Place';
             }
         });
     }
@@ -531,5 +839,5 @@ async function loginUser(email, password) {
         );
     }
 
-    window.location.href = 'index.html';
+    window.location.href = getSafeLoginDestination();
 }
