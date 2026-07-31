@@ -216,6 +216,9 @@ Helper methods, fixtures, and fake classes are not counted as tests.
   - Verifies that owners cannot review their own places.
 - `test_user_cannot_review_same_place_twice`
   - Verifies that a user cannot review the same place more than once.
+- `test_admin_can_review_same_place_twice`
+  - Verifies that an administrator can create multiple reviews for the same
+    place.
 - `test_reviews_can_be_listed_by_user`
   - Verifies facade filtering of reviews by author.
 - `test_deleting_reviewer_preserves_review`
@@ -312,6 +315,9 @@ Helper methods, fixtures, and fake classes are not counted as tests.
 - `test_duplicate_review_attempt_returns_bad_request`
   - Verifies duplicate reviews return HTTP 400, the expected error body, and no
     extra review is stored.
+- `test_admin_can_review_same_place_more_than_once`
+  - Verifies both review-creation endpoints allow an authenticated administrator
+    to create multiple reviews for the same place.
 - `test_jwt_protected_write_routes_require_token`
   - Verifies protected write routes return HTTP 401 when the Authorization
     header is missing:

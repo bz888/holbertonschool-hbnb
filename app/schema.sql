@@ -75,7 +75,6 @@ CREATE TABLE reviews (
     CONSTRAINT fk_reviews_place
         FOREIGN KEY (place_id) REFERENCES places(id)
         ON DELETE CASCADE,
-    CONSTRAINT uq_reviews_user_place UNIQUE (user_id, place_id),
     CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 5)
 );
 

@@ -127,5 +127,8 @@ class PlaceReviewList(Resource):
         review_data["place_id"] = place_id
         review_data["user_id"] = get_jwt_identity()
 
-        review = facade.create_review(review_data)
+        review = facade.create_review(
+            review_data,
+            is_admin=get_jwt().get("is_admin", False) is True,
+        )
         return review, 201

@@ -41,14 +41,6 @@ class Review(BaseModel):
         back_populates="reviews",
     )
 
-    __table_args__ = (
-        db.UniqueConstraint(
-            "user_id",
-            "place_id",
-            name="uq_review_user_place",
-        ),
-    )
-
     def __init__(
         self,
         text=None,

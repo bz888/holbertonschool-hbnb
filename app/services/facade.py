@@ -326,7 +326,7 @@ class HBnBFacade:
 
         return place
 
-    def create_review(self, review_data):
+    def create_review(self, review_data, is_admin=False):
         data = review_data.copy()
         place = self.place_repo.get(data["place_id"])
         if place is None:
@@ -336,10 +336,10 @@ class HBnBFacade:
         if user is None:
             raise UserNotFound(data["user_id"])
 
-        if user.id == place.owner_id:
+        if not is_admin and user.id == place.owner_id:
             raise OwnerCannotReviewOwnPlace()
 
-        if self.review_repo.find_one(
+        if not is_admin and self.review_repo.find_one(
             place_id=place.id,
             user_id=user.id,
         ):

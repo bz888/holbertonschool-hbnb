@@ -445,6 +445,56 @@ class TestApiErrorHandlerIntegration(unittest.TestCase):
             [first_review["id"]],
         )
 
+    def test_admin_can_review_same_place_more_than_once(self):
+        owner = self._create_user()
+        place = self._create_place(owner["id"])
+        review_data = {
+            "text": "First admin review",
+            "rating": 5,
+            "place_id": place["id"],
+        }
+
+        first_response = self.client.post(
+            "/api/v1/reviews/",
+            json=review_data,
+            headers=self.admin_headers,
+        )
+        second_response = self.client.post(
+            f"/api/v1/places/{place['id']}/reviews",
+            json={
+                "text": "Second admin review",
+                "rating": 4,
+            },
+            headers=self.admin_headers,
+        )
+
+        self.assertEqual(first_response.status_code, 201)
+        self.assertEqual(second_response.status_code, 201)
+        self.assertNotEqual(
+            first_response.get_json()["id"],
+            second_response.get_json()["id"],
+        )
+        self.assertEqual(
+            len(facade.get_reviews_by_place(place["id"])),
+            2,
+        )
+
+    def test_admin_can_review_own_place(self):
+        place = self._create_place(self.admin.id)
+
+        response = self.client.post(
+            f"/api/v1/places/{place['id']}/reviews",
+            json={
+                "text": "Admin review of own place",
+                "rating": 5,
+            },
+            headers=self.admin_headers,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.get_json()["user_id"], self.admin.id)
+        self.assertEqual(response.get_json()["place_id"], place["id"])
+
     def test_jwt_protected_write_routes_require_token(self):
         owner = self._create_user()
         reviewer = self._create_user(
